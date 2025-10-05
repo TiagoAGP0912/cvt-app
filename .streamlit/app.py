@@ -447,16 +447,15 @@ def seccion_pecas_cvt():
     # Carrega lista de peças
     pecas_df = load_pecas()
     
-    # Inicializa lista de peças no session state
+    # Inicializa listas e estados
     if 'pecas_adicionadas' not in st.session_state:
         st.session_state.pecas_adicionadas = []
-    # Inicializa edição temporária
     if 'peca_em_edicao' not in st.session_state:
         st.session_state.peca_em_edicao = None
     if 'peca_temp_campos' not in st.session_state:
         st.session_state.peca_temp_campos = {}
     
-    # ---------- FORM 1: seleção / abrir campos (não salva ainda) ----------
+    # ---------- FORM 1: Selecionar peça e abrir campos ----------
     with st.form("form_select_peca"):
         col1, col2 = st.columns([1, 2])
         
@@ -479,64 +478,74 @@ def seccion_pecas_cvt():
                     codigo_peca = peca_selecionada.split(" - ")[0]
                     peca_info = get_peca_by_codigo(codigo_peca)
                     if peca_info is not None:
-                        st.text_input("Código", value=peca_info['codigo'], disabled=True, key="codigo_peca_display")
-                        st.text_input("Descrição", value=peca_info['descricao'], disabled=True, key="desc_peca_display")
-                        st.text_input("Categoria", value=peca_info.get('categoria', 'N/A'), disabled=True, key="cat_peca_display")
+                        st.text_input("Código", value=peca_info['codigo'], disabled=True)
+                        st.text_input("Descrição", value=peca_info['descricao'], disabled=True)
+                        st.text_input("Categoria", value=peca_info.get('categoria', 'N/A'), disabled=True)
             else:
                 st.info("Nenhuma peça cadastrada")
-                codigo_peca = st.text_input("Código da Peça", placeholder="Código interno", key="codigo_manual")
-                descricao_peca = st.text_input("Descrição da Peça", placeholder="Descrição detalhada", key="desc_manual")
+                codigo_peca = st.text_input("Código da Peça", placeholder="Código interno")
+                descricao_peca = st.text_input("Descrição da Peça", placeholder="Descrição detalhada")
         
         with col2:
-            # Campos básicos que serão trazidos para o formulário de edição
-            qtd_temp = st.number_input("Quantidade", min_value=1, value=st.session_state.peca_temp_campos.get('quantidade', 1), key="qtd_peca_select")
-            prio_temp = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"], index=["NORMAL", "URGENTE", "CRÍTICA"].index(st.session_state.peca_temp_campos.get('prioridade', 'NORMAL')), key="prio_peca_select")
-            obs_temp = st.text_area("Observações da Peça", value=st.session_state.peca_temp_campos.get('observacoes', ''), placeholder="Observações específicas...", key="obs_peca_select")
+            prioridade_temp = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"], key="prio_peca_select")
+            observacoes_temp = st.text_area("Observações", placeholder="Observações específicas...", key="obs_peca_select")
         
         abrir_campos = st.form_submit_button("➕ Abrir Campos para Detalhes")
         
         if abrir_campos:
-            # Valida e abre o modo de edição (não salva)
+            # Valida e abre o modo de edição (não salva ainda)
             if not pecas_df.empty and peca_selecionada:
                 if peca_info is not None:
-                    st.session_state.peca_em_edicao = {"codigo": peca_info['codigo'], "descricao": peca_info['descricao']}
+                    st.session_state.peca_em_edicao = {
+                        "codigo": peca_info['codigo'],
+                        "descricao": peca_info['descricao']
+                    }
                 else:
                     st.error("Peça selecionada não encontrada.")
                     st.session_state.peca_em_edicao = None
             else:
-                # Entrada manual
                 if codigo_peca and descricao_peca:
-                    st.session_state.peca_em_edicao = {"codigo": codigo_peca, "descricao": descricao_peca}
+                    st.session_state.peca_em_edicao = {
+                        "codigo": codigo_peca,
+                        "descricao": descricao_peca
+                    }
                 else:
                     st.error("Preencha código e descrição da peça para abrir os campos.")
                     st.session_state.peca_em_edicao = None
             
-            # salva temporariamente os valores básicos para preencher o próximo formulário
+            # Salva temporariamente prioridade e observações
             st.session_state.peca_temp_campos = {
-                "quantidade": int(qtd_temp) if qtd_temp else 1,
-                "prioridade": prio_temp,
-                "observacoes": obs_temp
+                "prioridade": prioridade_temp,
+                "observacoes": observacoes_temp
             }
             st.rerun()
     
-    # ---------- FORM 2: editar os detalhes (aparece somente depois de "Abrir Campos") ----------
+    # ---------- FORM 2: editar os detalhes e salvar ----------
     if st.session_state.peca_em_edicao:
         peca_edit = st.session_state.peca_em_edicao
         st.markdown("---")
         st.subheader(f"✍️ Detalhes da Peça: {peca_edit['descricao']}")
         
         codigo_edit = peca_edit['codigo']
-        # busca campos específicos da peça (se existir)
         campos_especificos = get_campos_por_peca(codigo_edit) if not pecas_df.empty else []
         
         with st.form("form_editar_peca"):
-            # renderiza campos dinâmicos (se houver)
+            # Campos dinâmicos (se houver)
             valores_campos = render_campos_dinamicos(campos_especificos)
             
-            # campos finais (com keys diferentes para não conflitar)
-            quantidade = st.number_input("Quantidade (final)", min_value=1, value=st.session_state.peca_temp_campos.get('quantidade', 1), key="qtd_peca_edit")
-            prioridade = st.selectbox("Prioridade (final)", ["NORMAL", "URGENTE", "CRÍTICA"], index=["NORMAL", "URGENTE", "CRÍTICA"].index(st.session_state.peca_temp_campos.get('prioridade', 'NORMAL')), key="prio_peca_edit")
-            observacoes_peca = st.text_area("Observações (final)", value=st.session_state.peca_temp_campos.get('observacoes', ''), key="obs_peca_edit")
+            # Agora sim: quantidade só aqui
+            quantidade = st.number_input("Quantidade", min_value=1, value=1, key="qtd_peca_edit")
+            prioridade = st.selectbox(
+                "Prioridade",
+                ["NORMAL", "URGENTE", "CRÍTICA"],
+                index=["NORMAL", "URGENTE", "CRÍTICA"].index(st.session_state.peca_temp_campos.get('prioridade', 'NORMAL')),
+                key="prio_peca_edit"
+            )
+            observacoes_peca = st.text_area(
+                "Observações",
+                value=st.session_state.peca_temp_campos.get('observacoes', ''),
+                key="obs_peca_edit"
+            )
             
             col_salvar, col_cancel = st.columns([1,1])
             with col_salvar:
@@ -545,7 +554,6 @@ def seccion_pecas_cvt():
                 cancelar = st.form_submit_button("↩️ Cancelar")
             
             if salvar_peca:
-                # Prepara dados extras dos campos dinâmicos
                 dados_extras = ""
                 if valores_campos:
                     dados_extras = " | ".join([f"{k}: {v}" for k, v in valores_campos.items()])
@@ -559,11 +567,9 @@ def seccion_pecas_cvt():
                     "observacoes": observacoes_peca
                 }
                 
-                # Adiciona à lista no session state
                 st.session_state.pecas_adicionadas.append(peca_data)
                 st.success(f"Peça {peca_edit['descricao']} adicionada à lista!")
                 
-                # limpa modo de edição
                 st.session_state.peca_em_edicao = None
                 st.session_state.peca_temp_campos = {}
                 st.rerun()
@@ -573,7 +579,7 @@ def seccion_pecas_cvt():
                 st.session_state.peca_temp_campos = {}
                 st.rerun()
     
-    # ---------- Mostra lista de peças adicionadas ----------
+    # ---------- Lista final de peças ----------
     if st.session_state.pecas_adicionadas:
         st.markdown("---")
         st.subheader("📋 Peças na Lista")
@@ -586,10 +592,11 @@ def seccion_pecas_cvt():
                 st.caption(f"Qtd: {peca['quantidade']} | Prioridade: {peca['prioridade']} | Obs: {peca['observacoes']}")
             with col_peca2:
                 if st.button("✏️", key=f"edit_{i}"):
-                    # pode implementar edição futura
-                    # por enquanto reabre em edição (opcional)
                     st.session_state.peca_em_edicao = {"codigo": peca['codigo'], "descricao": peca['descricao']}
-                    st.session_state.peca_temp_campos = {"quantidade": peca['quantidade'], "prioridade": peca['prioridade'], "observacoes": peca['observacoes']}
+                    st.session_state.peca_temp_campos = {
+                        "prioridade": peca['prioridade'],
+                        "observacoes": peca['observacoes']
+                    }
                     st.rerun()
             with col_peca3:
                 if st.button("🗑️", key=f"del_{i}"):
