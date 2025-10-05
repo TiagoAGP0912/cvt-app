@@ -600,7 +600,37 @@ def cvt_form():
                                  placeholder="Observações, recomendações, etc...",
                                  height=80)
         
+        # SEÇÃO DE PEÇAS INTEGRADA DIRETAMENTE NA CVT
+        st.markdown("---")
+        st.subheader("🛠️ Peças Requeridas")
         
+        # Carrega lista de peças
+        pecas_df = load_pecas()
+        
+        col_peca1, col_peca2 = st.columns([1, 2])
+        
+        with col_peca1:
+            if not pecas_df.empty:
+                peca_options = pecas_df[['codigo', 'descricao', 'categoria']].apply(
+                    lambda x: f"{x['codigo']} - {x['descricao']} ({x['categoria']})", axis=1
+                ).tolist()
+                
+                peca_selecionada_cvt = st.selectbox(
+                    "Selecionar Peça", 
+                    options=[""] + peca_options,
+                    key="peca_cvt_main"
+                )
+                
+                if peca_selecionada_cvt:
+                    codigo_peca_cvt = peca_selecionada_cvt.split(" - ")[0]
+                    peca_info_cvt = get_peca_by_codigo(codigo_peca_cvt)
+                    if peca_info_cvt is not None:
+                        st.text_input("Código ", value=peca_info_cvt['codigo'], disabled=True, key="codigo_disp")
+                        st.text_input("Descrição ", value=peca_info_cvt['descricao'], disabled=True, key="desc_disp")
+            else:
+                st.info("Nenhuma peça cadastrada")
+                codigo_peca_cvt = st.text_input("Código da Peça", placeholder="Código interno")
+                descricao_peca_cvt = st.text_input("Descrição da Peça", placeholder="Descrição detalhada")
         
         with col_peca2:
             # CAMPOS DINÂMICOS INSTANTÂNEOS na CVT principal
