@@ -439,19 +439,19 @@ def logout():
     st.rerun()
 
 # --- Componente para Adicionar Peças ---
-def pecas_modal(numero_cvt):
-    """Modal para adicionar peças à CVT com campos dinâmicos INSTANTÂNEOS"""
+def seccion_pecas_cvt():
+    """Seção de peças que aparece quando clica em 'Pedir peças'"""
     st.markdown("---")
-    st.subheader("➕ Adicionar Peça à Requisição")
+    st.subheader("🛠️ Pedido de Peças")
     
     # Carrega lista de peças
     pecas_df = load_pecas()
     
-    # Inicializa session state para a peça selecionada
-    if f'peca_selecionada_{numero_cvt}' not in st.session_state:
-        st.session_state[f'peca_selecionada_{numero_cvt}'] = ""
+    # Inicializa lista de peças no session state
+    if 'pecas_adicionadas' not in st.session_state:
+        st.session_state.pecas_adicionadas = []
     
-    with st.form(f"peca_form_{numero_cvt}"):
+    with st.form("form_pecas_cvt"):
         col1, col2 = st.columns([1, 2])
         
         with col1:
@@ -462,44 +462,41 @@ def pecas_modal(numero_cvt):
                 ).tolist()
                 
                 peca_selecionada = st.selectbox(
-                    "Selecionar Peça *", 
+                    "Selecionar Peça", 
                     options=[""] + peca_options,
-                    key=f"select_peca_{numero_cvt}"
+                    key="select_peca_cvt"
                 )
-                
-                # Atualiza session state quando a peça muda
-                if peca_selecionada != st.session_state[f'peca_selecionada_{numero_cvt}']:
-                    st.session_state[f'peca_selecionada_{numero_cvt}'] = peca_selecionada
-                    st.rerun()
                 
                 if peca_selecionada:
                     codigo_peca = peca_selecionada.split(" - ")[0]
                     peca_info = get_peca_by_codigo(codigo_peca)
                     if peca_info is not None:
-                        st.text_input("Código", value=peca_info['codigo'], disabled=True)
-                        st.text_input("Descrição", value=peca_info['descricao'], disabled=True)
-                        st.text_input("Categoria", value=peca_info.get('categoria', 'N/A'), disabled=True)
+                        st.text_input("Código", value=peca_info['codigo'], disabled=True, key="codigo_peca")
+                        st.text_input("Descrição", value=peca_info['descricao'], disabled=True, key="desc_peca")
+                        st.text_input("Categoria", value=peca_info.get('categoria', 'N/A'), disabled=True, key="cat_peca")
             else:
                 st.info("Nenhuma peça cadastrada")
-                codigo_peca = st.text_input("Código da Peça *")
-                descricao_peca = st.text_input("Descrição da Peça *")
+                codigo_peca = st.text_input("Código da Peça", placeholder="Código interno", key="codigo_manual")
+                descricao_peca = st.text_input("Descrição da Peça", placeholder="Descrição detalhada", key="desc_manual")
         
         with col2:
-            # CAMPOS DINÂMICOS APARECEM INSTANTANEAMENTE
-            if st.session_state[f'peca_selecionada_{numero_cvt}']:
-                codigo_peca = st.session_state[f'peca_selecionada_{numero_cvt}'].split(" - ")[0]
+            # CAMPOS DINÂMICOS INSTANTÂNEOS
+            if peca_selecionada:
+                codigo_peca = peca_selecionada.split(" - ")[0]
                 campos_especificos = get_campos_por_peca(codigo_peca)
                 valores_campos = render_campos_dinamicos(campos_especificos)
             
-            quantidade_geral = st.number_input("Quantidade Total *", min_value=1, value=1)
-            prioridade = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"])
-            observacoes = st.text_area("Observações Gerais", placeholder="Observações adicionais sobre esta peça...")
+            quantidade = st.number_input("Quantidade", min_value=1, value=1, key="qtd_peca")
+            prioridade = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"], key="prio_peca")
+            observacoes_peca = st.text_area("Observações da Peça", placeholder="Observações específicas...", key="obs_peca")
         
-        submitted = st.form_submit_button("✅ Adicionar Peça")
+        # Botão para ADICIONAR peça à lista (não salva ainda)
+        col_add1, col_add2 = st.columns([1, 3])
+        with col_add1:
+            adicionar_peca = st.form_submit_button("➕ Adicionar Peça à Lista")
         
-        if submitted:
+        if adicionar_peca:
             if not pecas_df.empty and peca_selecionada:
-                # Usa peça do cadastro
                 peca_info = get_peca_by_codigo(codigo_peca)
                 if peca_info is not None:
                     # Prepara dados extras dos campos dinâmicos
@@ -507,47 +504,58 @@ def pecas_modal(numero_cvt):
                     if 'valores_campos' in locals() and valores_campos:
                         dados_extras = " | ".join([f"{k}: {v}" for k, v in valores_campos.items()])
                     
-                    req_data = {
-                        "tecnico": st.session_state["user_nome"],
-                        "numero_cvt": numero_cvt,
-                        "peca_codigo": peca_info['codigo'],
-                        "peca_descricao": f"{peca_info['descricao']} [{dados_extras}]" if dados_extras else peca_info['descricao'],
-                        "quantidade": quantidade_geral,
+                    peca_data = {
+                        "codigo": peca_info['codigo'],
+                        "descricao": peca_info['descricao'],
+                        "dados_extras": dados_extras,
+                        "quantidade": quantidade,
                         "prioridade": prioridade,
-                        "observacoes": observacoes
+                        "observacoes": observacoes_peca
                     }
-                    append_requisicao(req_data)
-                    st.success(f"Peça {peca_info['descricao']} adicionada com sucesso!")
                     
-                    # Limpa a seleção após adicionar
-                    st.session_state[f'peca_selecionada_{numero_cvt}'] = ""
-                    return True
+                    # Adiciona à lista no session state
+                    st.session_state.pecas_adicionadas.append(peca_data)
+                    st.success(f"Peça {peca_info['descricao']} adicionada à lista!")
+                    
             else:
-                # Peça manual
                 if codigo_peca and descricao_peca:
-                    req_data = {
-                        "tecnico": st.session_state["user_nome"],
-                        "numero_cvt": numero_cvt,
-                        "peca_codigo": codigo_peca,
-                        "peca_descricao": descricao_peca,
-                        "quantidade": quantidade_geral,
+                    peca_data = {
+                        "codigo": codigo_peca,
+                        "descricao": descricao_peca,
+                        "dados_extras": "",
+                        "quantidade": quantidade,
                         "prioridade": prioridade,
-                        "observacoes": observacoes
+                        "observacoes": observacoes_peca
                     }
-                    append_requisicao(req_data)
-                    st.success(f"Peça {descricao_peca} adicionada com sucesso!")
                     
-                    # Limpa a seleção após adicionar
-                    st.session_state[f'peca_selecionada_{numero_cvt}'] = ""
-                    return True
+                    st.session_state.pecas_adicionadas.append(peca_data)
+                    st.success(f"Peça {descricao_peca} adicionada à lista!")
                 else:
                     st.error("Preencha código e descrição da peça")
     
-    return False
+    # Mostra lista de peças adicionadas
+    if st.session_state.pecas_adicionadas:
+        st.markdown("---")
+        st.subheader("📋 Peças na Lista")
+        
+        for i, peca in enumerate(st.session_state.pecas_adicionadas):
+            col_peca1, col_peca2, col_peca3 = st.columns([3, 1, 1])
+            with col_peca1:
+                descricao_completa = f"{peca['descricao']} [{peca['dados_extras']}]" if peca['dados_extras'] else peca['descricao']
+                st.write(f"**{peca['codigo']}** - {descricao_completa}")
+                st.caption(f"Qtd: {peca['quantidade']} | Prioridade: {peca['prioridade']} | Obs: {peca['observacoes']}")
+            with col_peca2:
+                if st.button("✏️", key=f"edit_{i}"):
+                    # Implementar edição se necessário
+                    pass
+            with col_peca3:
+                if st.button("🗑️", key=f"del_{i}"):
+                    st.session_state.pecas_adicionadas.pop(i)
+                    st.rerun()
 
 # --- Componentes da Interface ---
 def cvt_form():
-    """Formulário para preenchimento de CVT com peças integradas"""
+    """Formulário para preenchimento de CVT - Peças aparecem só quando solicitado"""
     st.header("📝 Comprovante de Visita Técnica")
     
     # Carrega lista de clientes
@@ -600,56 +608,30 @@ def cvt_form():
                                  placeholder="Observações, recomendações, etc...",
                                  height=80)
         
-        # SEÇÃO DE PEÇAS INTEGRADA DIRETAMENTE NA CVT
-        st.markdown("---")
-        st.subheader("🛠️ Peças Requeridas")
+        # BOTÃO PARA PEDIR PEÇAS - aparece no final do formulário principal
+        col_btn1, col_btn2 = st.columns([1, 3])
+        with col_btn1:
+            pedir_pecas = st.form_submit_button("🛠️ Pedir Peças")
+        with col_btn2:
+            salvar_sem_pecas = st.form_submit_button("✅ Salvar CVT sem Peças")
         
-        # Carrega lista de peças
-        pecas_df = load_pecas()
-        
-        col_peca1, col_peca2 = st.columns([1, 2])
-        
-        with col_peca1:
-            if not pecas_df.empty:
-                peca_options = pecas_df[['codigo', 'descricao', 'categoria']].apply(
-                    lambda x: f"{x['codigo']} - {x['descricao']} ({x['categoria']})", axis=1
-                ).tolist()
-                
-                peca_selecionada_cvt = st.selectbox(
-                    "Selecionar Peça", 
-                    options=[""] + peca_options,
-                    key="peca_cvt_main"
-                )
-                
-                if peca_selecionada_cvt:
-                    codigo_peca_cvt = peca_selecionada_cvt.split(" - ")[0]
-                    peca_info_cvt = get_peca_by_codigo(codigo_peca_cvt)
-                    if peca_info_cvt is not None:
-                        st.text_input("Código ", value=peca_info_cvt['codigo'], disabled=True, key="codigo_disp")
-                        st.text_input("Descrição ", value=peca_info_cvt['descricao'], disabled=True, key="desc_disp")
-            else:
-                st.info("Nenhuma peça cadastrada")
-                codigo_peca_cvt = st.text_input("Código da Peça", placeholder="Código interno")
-                descricao_peca_cvt = st.text_input("Descrição da Peça", placeholder="Descrição detalhada")
-        
-        with col_peca2:
-            # CAMPOS DINÂMICOS INSTANTÂNEOS na CVT principal
-            if peca_selecionada_cvt:
-                codigo_peca_cvt = peca_selecionada_cvt.split(" - ")[0]
-                campos_especificos_cvt = get_campos_por_peca(codigo_peca_cvt)
-                valores_campos_cvt = render_campos_dinamicos(campos_especificos_cvt)
-            
-            quantidade_cvt = st.number_input("Quantidade", min_value=1, value=1, key="qtd_cvt")
-            prioridade_cvt = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"], key="prio_cvt")
-            observacoes_peca = st.text_area("Observações da Peça", placeholder="Observações específicas...", key="obs_peca")
-        
-        submitted = st.form_submit_button("✅ Salvar CVT com Peças")
-        
-        if submitted:
+        if pedir_pecas:
             if not all([cliente_selecionado, endereco, servico_realizado]):
-                st.error("Preencha todos os campos obrigatórios da CVT (*)")
+                st.error("Preencha todos os campos obrigatórios da CVT (*) antes de pedir peças")
             else:
-                # Prepara dados da CVT
+                st.session_state.mostrar_pecas = True
+                st.session_state.dados_cvt_temp = {
+                    "cliente": cliente_selecionado,
+                    "endereco": endereco,
+                    "servico_realizado": servico_realizado,
+                    "obs": observacoes
+                }
+                st.rerun()
+        
+        if salvar_sem_pecas:
+            if not all([cliente_selecionado, endereco, servico_realizado]):
+                st.error("Preencha todos os campos obrigatórios (*)")
+            else:
                 cvt_data = {
                     "tecnico": st.session_state["user_nome"],
                     "cliente": cliente_selecionado,
@@ -658,75 +640,104 @@ def cvt_form():
                     "obs": observacoes,
                     "pecas_requeridas": ""
                 }
-                
-                # Salva a CVT primeiro
                 numero_cvt = append_cvt(cvt_data)
-                
                 if numero_cvt:
-                    # Se há peça selecionada, salva a requisição também
-                    if peca_selecionada_cvt:
-                        peca_info = get_peca_by_codigo(codigo_peca_cvt)
-                        if peca_info is not None:
-                            # Prepara dados extras dos campos dinâmicos
-                            dados_extras = ""
-                            if 'valores_campos_cvt' in locals() and valores_campos_cvt:
-                                dados_extras = " | ".join([f"{k}: {v}" for k, v in valores_campos_cvt.items()])
-                            
+                    st.success(f"CVT {numero_cvt} salva sem peças!")
+                    st.session_state.cvt_salva = True
+                    st.session_state.numero_cvt_salva = numero_cvt
+                    st.rerun()
+
+    # SEÇÃO DE PEÇAS - SÓ APARECE QUANDO CLICAR EM "PEDIR PEÇAS"
+    if st.session_state.get('mostrar_pecas', False):
+        # Mostra os dados da CVT resumidos
+        st.markdown("---")
+        st.subheader("📋 Resumo da CVT")
+        dados_temp = st.session_state.dados_cvt_temp
+        col_res1, col_res2 = st.columns(2)
+        with col_res1:
+            st.write(f"**Cliente:** {dados_temp['cliente']}")
+            st.write(f"**Endereço:** {dados_temp['endereco']}")
+        with col_res2:
+            st.write(f"**Serviço:** {dados_temp['servico_realizado'][:100]}...")
+            if dados_temp['obs']:
+                st.write(f"**Obs:** {dados_temp['obs'][:100]}...")
+        
+        # Chama a seção de peças
+        seccion_pecas_cvt()
+        
+        # Botão para SALVAR CVT COM PEÇAS
+        st.markdown("---")
+        col_save1, col_save2, col_save3 = st.columns([1, 1, 1])
+        with col_save1:
+            if st.button("✅ Salvar CVT com Peças", type="primary"):
+                if not st.session_state.pecas_adicionadas:
+                    st.error("Adicione pelo menos uma peça antes de salvar")
+                else:
+                    # Salva a CVT
+                    cvt_data = {
+                        "tecnico": st.session_state["user_nome"],
+                        "cliente": dados_temp['cliente'],
+                        "endereco": dados_temp['endereco'],
+                        "servico_realizado": dados_temp['servico_realizado'],
+                        "obs": dados_temp['obs'],
+                        "pecas_requeridas": ", ".join([f"{p['codigo']} ({p['quantidade']})" for p in st.session_state.pecas_adicionadas])
+                    }
+                    numero_cvt = append_cvt(cvt_data)
+                    
+                    if numero_cvt:
+                        # Salva cada peça como requisição
+                        for peca in st.session_state.pecas_adicionadas:
+                            descricao_completa = f"{peca['descricao']} [{peca['dados_extras']}]" if peca['dados_extras'] else peca['descricao']
                             req_data = {
                                 "tecnico": st.session_state["user_nome"],
                                 "numero_cvt": numero_cvt,
-                                "peca_codigo": peca_info['codigo'],
-                                "peca_descricao": f"{peca_info['descricao']} [{dados_extras}]" if dados_extras else peca_info['descricao'],
-                                "quantidade": quantidade_cvt,
-                                "prioridade": prioridade_cvt,
-                                "observacoes": observacoes_peca
+                                "peca_codigo": peca['codigo'],
+                                "peca_descricao": descricao_completa,
+                                "quantidade": peca['quantidade'],
+                                "prioridade": peca['prioridade'],
+                                "observacoes": peca['observacoes']
                             }
                             append_requisicao(req_data)
-                            st.success(f"CVT {numero_cvt} salva com peça {peca_info['descricao']}!")
-                    else:
-                        st.success(f"CVT {numero_cvt} salva sem peças!")
-                    
-                    st.session_state['cvt_salva'] = True
-                    st.session_state['numero_cvt_salva'] = numero_cvt
-                    st.rerun()
+                        
+                        st.success(f"CVT {numero_cvt} salva com {len(st.session_state.pecas_adicionadas)} peça(s)!")
+                        
+                        # Limpa o session state
+                        st.session_state.mostrar_pecas = False
+                        st.session_state.pecas_adicionadas = []
+                        st.session_state.dados_cvt_temp = None
+                        st.session_state.cvt_salva = True
+                        st.session_state.numero_cvt_salva = numero_cvt
+                        st.rerun()
+        
+        with col_save2:
+            if st.button("↩️ Voltar para Editar CVT"):
+                st.session_state.mostrar_pecas = False
+                st.rerun()
+        
+        with col_save3:
+            if st.button("🗑️ Cancelar CVT"):
+                st.session_state.mostrar_pecas = False
+                st.session_state.pecas_adicionadas = []
+                st.session_state.dados_cvt_temp = None
+                st.rerun()
 
-    # Se a CVT foi salva, mostra opção para adicionar MAIS peças
+    # Se a CVT foi salva, mostra opções pós-salvamento
     if st.session_state.get('cvt_salva', False):
         numero_cvt = st.session_state.get('numero_cvt_salva')
+        st.success(f"CVT {numero_cvt} processada com sucesso!")
         
-        st.success(f"CVT {numero_cvt} salva com sucesso!")
-        
-        # Opções pós-salvamento
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if st.button("➕ Adicionar Mais Peças", type="primary"):
-                st.session_state['adicionar_mais_pecas'] = True
-        
-        with col2:
-            if st.button("📋 Ver Minhas CVTs"):
-                st.session_state['mostrar_minhas_cvts'] = True
-        
-        with col3:
+        col_pos1, col_pos2 = st.columns(2)
+        with col_pos1:
             if st.button("📝 Nova CVT"):
-                st.session_state['cvt_salva'] = False
-                st.session_state['adicionar_mais_pecas'] = False
-                st.session_state['mostrar_minhas_cvts'] = False
+                # Limpa tudo
+                for key in ['cvt_salva', 'numero_cvt_salva', 'mostrar_pecas', 'pecas_adicionadas', 'dados_cvt_temp']:
+                    if key in st.session_state:
+                        del st.session_state[key]
                 st.rerun()
+        with col_pos2:
+            if st.button("📋 Ver Minhas CVTs"):
+                st.session_state.mostrar_minhas_cvts = True
         
-        # Modal para adicionar MAIS peças
-        if st.session_state.get('adicionar_mais_pecas', False):
-            pecas_modal(numero_cvt)
-            
-            # Botão para finalizar
-            if st.button("✅ Finalizar CVT"):
-                st.session_state['cvt_salva'] = False
-                st.session_state['adicionar_mais_pecas'] = False
-                st.success("CVT finalizada com sucesso!")
-                time.sleep(2)
-                st.rerun()
-        
-        # Mostrar CVTs do técnico
         if st.session_state.get('mostrar_minhas_cvts', False):
             st.subheader("📋 Minhas CVTs Recentes")
             cvt_df = read_all_cvt()
@@ -921,8 +932,12 @@ def main():
         st.session_state.authenticated = False
     if "cvt_salva" not in st.session_state:
         st.session_state.cvt_salva = False
-    if "adicionar_mais_pecas" not in st.session_state:
-        st.session_state.adicionar_mais_pecas = False
+    if "mostrar_pecas" not in st.session_state:
+        st.session_state.mostrar_pecas = False
+    if "pecas_adicionadas" not in st.session_state:
+        st.session_state.pecas_adicionadas = []
+    if "dados_cvt_temp" not in st.session_state:
+        st.session_state.dados_cvt_temp = None
     if "mostrar_minhas_cvts" not in st.session_state:
         st.session_state.mostrar_minhas_cvts = False
     
