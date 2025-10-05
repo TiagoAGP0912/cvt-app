@@ -999,9 +999,7 @@ def main():
         # Footer informativo
         st.markdown("---")
         st.markdown(
-            "**Credenciais de teste:**  \n"
-            "👨‍🔧 Técnico: `tecnico1` / `123`  \n"
-            "👨‍💼 Supervisor: `supervisor` / `admin`"
+           
         )
     else:
         main_interface()
