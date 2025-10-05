@@ -7,7 +7,7 @@ import json
 import time
 
 # --- Configuração inicial ---
-st.set_page_config(page_title="CVT App", layout="centered", page_icon="🛠️")
+st.set_page_config(page_title="CVT App", layout="centered", page_icon="⚙️")
 
 # --- Constantes e configurações ---
 SHEET_NAME = "CVT_DB"
@@ -442,7 +442,7 @@ def logout():
 def seccion_pecas_cvt():
     """Seção de peças que aparece quando clica em 'Pedir peças'"""
     st.markdown("---")
-    st.subheader("🛠️ Pedido de Peças")
+    st.subheader("⚙️ Pedido de Peças")
     
     # Carrega lista de peças
     pecas_df = load_pecas()
@@ -662,7 +662,7 @@ def cvt_form():
         # BOTÃO PARA PEDIR PEÇAS - aparece no final do formulário principal
         col_btn1, col_btn2 = st.columns([1, 3])
         with col_btn1:
-            pedir_pecas = st.form_submit_button("🛠️ Pedir Peças")
+            pedir_pecas = st.form_submit_button("⚙️ Pedir Peças")
         with col_btn2:
             salvar_sem_pecas = st.form_submit_button("✅ Salvar CVT sem Peças")
         
@@ -933,7 +933,7 @@ def main_interface():
         if os.path.exists("logo.png"):
             st.image("logo.png", width=80)
         else:
-            st.markdown("### 🛠️")
+            st.markdown("### ⚙️")
     with col2:
         st.title("Sistema CVT")
         st.caption(f"Logado como: {st.session_state['user_nome']} ({st.session_state['role']})")
