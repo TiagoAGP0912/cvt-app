@@ -607,7 +607,7 @@ def seccion_pecas_cvt():
 # --- Componentes da Interface ---
 def cvt_form():
     """Formulário para preenchimento de CVT - Peças aparecem só quando solicitado"""
-    st.header("📝 Comprovante de Visita Técnica")
+    st.header(" Comprovante de Visita Técnica")
     
     # Carrega lista de clientes
     clientes_df = load_clientes()
@@ -779,7 +779,7 @@ def cvt_form():
         
         col_pos1, col_pos2 = st.columns(2)
         with col_pos1:
-            if st.button("📝 Nova CVT"):
+            if st.button(" Nova CVT"):
                 # Limpa tudo
                 for key in ['cvt_salva', 'numero_cvt_salva', 'mostrar_pecas', 'pecas_adicionadas', 'dados_cvt_temp']:
                     if key in st.session_state:
@@ -943,11 +943,11 @@ def main_interface():
     
     # Menu de navegação - REMOVIDA A ABA "REQUISIÇÃO"
     if st.session_state["role"] == "SUPERVISOR":
-        menu_options = ["📝 Nova CVT", "📋 Minhas Req", "Gerenciamento"]
+        menu_options = [" Nova CVT", "📋 Minhas Req", "Gerenciamento"]
         menu_icons = ["file-earmark-text", "clipboard", "person-badge"]
         default_index = 0
     else:
-        menu_options = ["📝 Nova CVT", "📋 Minhas Req"]
+        menu_options = [" Nova CVT", "📋 Minhas Req"]
         menu_icons = ["file-earmark-text", "clipboard"]
         default_index = 0
     
@@ -967,7 +967,7 @@ def main_interface():
         )
     
     # Conteúdo baseado na seleção
-    if selected == "📝 Nova CVT":
+    if selected == " Nova CVT":
         cvt_form()
     elif selected == "📋 Minhas Req":
         minhas_requisicoes()
