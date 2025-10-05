@@ -224,7 +224,7 @@ def render_campos_dinamicos(campos):
     if not campos:
         return valores
     
-    st.subheader("📋 Informações Específicas da Peça")
+    st.subheader(" Informações Específicas da Peça")
     
     for campo in campos:
         if campo == 'pavimento':
@@ -582,7 +582,7 @@ def seccion_pecas_cvt():
     # ---------- Lista final de peças ----------
     if st.session_state.pecas_adicionadas:
         st.markdown("---")
-        st.subheader("📋 Peças na Lista")
+        st.subheader(" Peças na Lista")
         
         for i, peca in enumerate(st.session_state.pecas_adicionadas):
             col_peca1, col_peca2, col_peca3 = st.columns([3, 1, 1])
@@ -702,7 +702,7 @@ def cvt_form():
     if st.session_state.get('mostrar_pecas', False):
         # Mostra os dados da CVT resumidos
         st.markdown("---")
-        st.subheader("📋 Resumo da CVT")
+        st.subheader(" Resumo da CVT")
         dados_temp = st.session_state.dados_cvt_temp
         col_res1, col_res2 = st.columns(2)
         with col_res1:
@@ -786,11 +786,11 @@ def cvt_form():
                         del st.session_state[key]
                 st.rerun()
         with col_pos2:
-            if st.button("📋 Ver Minhas CVTs"):
+            if st.button(" Ver Minhas CVTs"):
                 st.session_state.mostrar_minhas_cvts = True
         
         if st.session_state.get('mostrar_minhas_cvts', False):
-            st.subheader("📋 Minhas CVTs Recentes")
+            st.subheader(" Minhas CVTs Recentes")
             cvt_df = read_all_cvt()
             user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
             
@@ -804,7 +804,7 @@ def cvt_form():
 
 def minhas_requisicoes():
     """Mostra requisições do técnico logado"""
-    st.header("📋 Minhas Requisições")
+    st.header("Minhas Requisições")
     
     df = read_all_requisicoes()
     if df.empty:
@@ -943,11 +943,11 @@ def main_interface():
     
     # Menu de navegação - REMOVIDA A ABA "REQUISIÇÃO"
     if st.session_state["role"] == "SUPERVISOR":
-        menu_options = [" Nova CVT", "📋 Minhas Req", "Gerenciamento"]
+        menu_options = [" Nova CVT", " Minhas Req", "Gerenciamento"]
         menu_icons = ["file-earmark-text", "clipboard", "person-badge"]
         default_index = 0
     else:
-        menu_options = [" Nova CVT", "📋 Minhas Req"]
+        menu_options = [" Nova CVT", " Minhas Req"]
         menu_icons = ["file-earmark-text", "clipboard"]
         default_index = 0
     
@@ -969,7 +969,7 @@ def main_interface():
     # Conteúdo baseado na seleção
     if selected == " Nova CVT":
         cvt_form()
-    elif selected == "📋 Minhas Req":
+    elif selected == " Minhas Req":
         minhas_requisicoes()
     elif selected == "Gerenciamento":
         supervisor_panel()
