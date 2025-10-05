@@ -477,7 +477,7 @@ def pecas_modal(numero_cvt):
         
         with col2:
             quantidade_geral = st.number_input("Quantidade Total *", min_value=1, value=1)
-            prioridade = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"])
+            prioridade = st.selectbox("Prioridade", ["NORMAL", "URGENTE"])
             observacoes = st.text_area("Observações Gerais", placeholder="Observações adicionais sobre esta peça...")
         
         submitted = st.form_submit_button("✅ Adicionar Peça")
