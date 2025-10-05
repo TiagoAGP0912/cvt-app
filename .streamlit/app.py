@@ -997,10 +997,7 @@ def main():
         login_form()
         
         # Footer informativo
-        st.markdown("---")
-        st.markdown(
-           
-        )
+        
     else:
         main_interface()
 
