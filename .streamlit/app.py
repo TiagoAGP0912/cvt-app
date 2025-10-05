@@ -495,62 +495,43 @@ def seccion_pecas_cvt():
         with col_add1:
             adicionar_peca = st.form_submit_button("➕ Adicionar Peça à Lista")
         
-        # Garante que o estado existe
-if "peca_em_edicao" not in st.session_state:
-    st.session_state.peca_em_edicao = None
-if "pecas_adicionadas" not in st.session_state:
-    st.session_state.pecas_adicionadas = []
-
-# Botão para escolher peça e abrir campos
-if adicionar_peca:
-    if not pecas_df.empty and peca_selecionada:
-        peca_info = get_peca_by_codigo(codigo_peca)
-        if peca_info is not None:
-            # Apenas armazena a peça selecionada para edição (não salva ainda)
-            st.session_state.peca_em_edicao = peca_info
-        else:
-            st.error("Peça não encontrada.")
-    else:
-        if codigo_peca and descricao_peca:
-            st.session_state.peca_em_edicao = {
-                "codigo": codigo_peca,
-                "descricao": descricao_peca
-            }
-        else:
-            st.error("Preencha código e descrição da peça.")
-
-# Se há uma peça em edição, exibe campos para preenchimento
-if st.session_state.peca_em_edicao:
-    peca = st.session_state.peca_em_edicao
-    st.write(f"**Peça selecionada:** {peca['descricao']}")
-
-    quantidade = st.number_input("Quantidade", min_value=1, value=1)
-    prioridade = st.selectbox("Prioridade", ["Baixa", "Média", "Alta"])
-    observacoes_peca = st.text_area("Observações")
-    
-    # Campos dinâmicos, se houver
-    if 'valores_campos' in locals() and valores_campos:
-        dados_extras = " | ".join([f"{k}: {v}" for k, v in valores_campos.items()])
-    else:
-        dados_extras = ""
-
-    # Botão separado para SALVAR
-    if st.button("Salvar peça"):
-        peca_data = {
-            "codigo": peca["codigo"],
-            "descricao": peca["descricao"],
-            "dados_extras": dados_extras,
-            "quantidade": quantidade,
-            "prioridade": prioridade,
-            "observacoes": observacoes_peca
-        }
-
-        st.session_state.pecas_adicionadas.append(peca_data)
-        st.success(f"Peça {peca['descricao']} adicionada à lista!")
-
-        # Limpa o modo de edição
-        st.session_state.peca_em_edicao = None
-
+        if adicionar_peca:
+            if not pecas_df.empty and peca_selecionada:
+                peca_info = get_peca_by_codigo(codigo_peca)
+                if peca_info is not None:
+                    # Prepara dados extras dos campos dinâmicos
+                    dados_extras = ""
+                    if 'valores_campos' in locals() and valores_campos:
+                        dados_extras = " | ".join([f"{k}: {v}" for k, v in valores_campos.items()])
+                    
+                    peca_data = {
+                        "codigo": peca_info['codigo'],
+                        "descricao": peca_info['descricao'],
+                        "dados_extras": dados_extras,
+                        "quantidade": quantidade,
+                        "prioridade": prioridade,
+                        "observacoes": observacoes_peca
+                    }
+                    
+                    # Adiciona à lista no session state
+                    st.session_state.pecas_adicionadas.append(peca_data)
+                    st.success(f"Peça {peca_info['descricao']} adicionada à lista!")
+                    
+            else:
+                if codigo_peca and descricao_peca:
+                    peca_data = {
+                        "codigo": codigo_peca,
+                        "descricao": descricao_peca,
+                        "dados_extras": "",
+                        "quantidade": quantidade,
+                        "prioridade": prioridade,
+                        "observacoes": observacoes_peca
+                    }
+                    
+                    st.session_state.pecas_adicionadas.append(peca_data)
+                    st.success(f"Peça {descricao_peca} adicionada à lista!")
+                else:
+                    st.error("Preencha código e descrição da peça")
     
     # Mostra lista de peças adicionadas
     if st.session_state.pecas_adicionadas:
