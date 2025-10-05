@@ -14,30 +14,34 @@ SHEET_NAME = "CVT_DB"
 CVT_SHEET = "CVT"
 REQ_SHEET = "REQUISICOES"
 USERS_SHEET = "USERS"
-CLIENTES_SHEET = "CLIENTES"  # Planilha específica para clientes
+CLIENTES_SHEET = "CLIENTES"
+PECAS_SHEET = "PECAS"
 
 # Arquivos CSV fallback
 CVT_CSV = "cvt_local.csv"
 REQ_CSV = "requisicoes_local.csv"
 USERS_CSV = "users_local.csv"
 CLIENTES_CSV = "clientes_local.csv"
+PECAS_CSV = "pecas_local.csv"
 
 # Colunas das planilhas
 CVT_COLUMNS = [
-    "created_at", "tecnico", "cliente", "endereco", "servico_realizado",
+    "created_at", "tecnico", "cliente", "endereco", "servico_realizado", 
     "obs", "pecas_requeridas", "status_cvt", "numero_cvt"
 ]
 
 REQ_COLUMNS = [
-    "created_at", "tecnico", "numero_cvt", "ordem_id", "peca_codigo",
+    "created_at", "tecnico", "numero_cvt", "ordem_id", "peca_codigo", 
     "peca_descricao", "quantidade", "status", "prioridade", "observacoes"
 ]
 
-# Colunas esperadas na planilha de clientes
 CLIENTES_COLUMNS = [
     "codigo", "nome", "endereco", "telefone", "email", "responsavel", "ativo"
 ]
 
+PECAS_COLUMNS = [
+    "codigo", "descricao", "categoria", "campos_especificos", "ativo"
+]
 
 # --- Inicialização do Google Sheets ---
 def init_gsheets():
@@ -47,7 +51,7 @@ def init_gsheets():
     try:
         import gspread
         from oauth2client.service_account import ServiceAccountCredentials
-
+        
         creds_json = None
         if "gcp_service_account" in st.secrets:
             try:
@@ -70,7 +74,7 @@ def init_gsheets():
         creds = ServiceAccountCredentials.from_json_keyfile_dict(sa_info, scope)
         client = gspread.authorize(creds)
         return client
-
+        
     except ImportError:
         st.warning("Bibliotecas Google não instaladas. Usando CSV local.")
         return None
@@ -78,14 +82,13 @@ def init_gsheets():
         st.error(f"Erro na inicialização: {str(e)}")
         return None
 
-
 # --- Gerenciamento de planilhas ---
 @st.cache_resource
 def get_client_and_worksheets():
     client = init_gsheets()
     if not client:
         return None
-
+        
     try:
         # Tenta abrir a planilha existente
         spreadsheet = client.open(SHEET_NAME)
@@ -99,31 +102,26 @@ def get_client_and_worksheets():
             return None
 
     # Garante que as worksheets existem
-    def ensure_worksheet(name, columns):
+    def ensure_worksheet(name):
         try:
-            worksheet = spreadsheet.worksheet(name)
-            return worksheet
+            return spreadsheet.worksheet(name)
         except Exception:
             try:
-                worksheet = spreadsheet.add_worksheet(title=name, rows=1000, cols=20)
-                if columns:
-                    worksheet.append_row(columns)
-                return worksheet
-            except Exception as e:
-                st.error(f"Erro ao criar worksheet {name}: {str(e)}")
+                return spreadsheet.add_worksheet(title=name, rows=1000, cols=20)
+            except Exception:
                 return None
 
     worksheets = {
         "client": client,
         "spreadsheet": spreadsheet,
-        "cvt": ensure_worksheet(CVT_SHEET, CVT_COLUMNS),
-        "req": ensure_worksheet(REQ_SHEET, REQ_COLUMNS),
-        "users": ensure_worksheet(USERS_SHEET, ["username", "password", "role", "nome"]),
-        "clientes": ensure_worksheet(CLIENTES_SHEET, None),  # Clientessem cabeçalhos fixos
+        "cvt": ensure_worksheet(CVT_SHEET),
+        "req": ensure_worksheet(REQ_SHEET),
+        "users": ensure_worksheet(USERS_SHEET),
+        "clientes": ensure_worksheet(CLIENTES_SHEET),
+        "pecas": ensure_worksheet(PECAS_SHEET),
     }
-
+    
     return worksheets
-
 
 # --- Operações com dados ---
 def append_to_sheet(worksheet, row):
@@ -135,7 +133,6 @@ def append_to_sheet(worksheet, row):
         st.error(f"Erro ao salvar no Sheets: {str(e)}")
         return False
 
-
 def read_from_sheet(worksheet):
     """Lê dados do Google Sheets"""
     try:
@@ -145,33 +142,28 @@ def read_from_sheet(worksheet):
         st.error(f"Erro ao ler do Sheets: {str(e)}")
         return pd.DataFrame()
 
-
 # --- Funções para Clientes ---
 def load_clientes():
-    """Carrega lista de clientes do Google Sheets ou CSV"""
+    """Carrega lista de clientes do Google Sheets"""
     client_info = get_client_and_worksheets()
-
+    
     if client_info and client_info["clientes"]:
         try:
             df = read_from_sheet(client_info["clientes"])
-            if not df.empty:
-                # Filtra apenas clientes ativos se existir a coluna
-                if 'ativo' in df.columns:
-                    df = df[df['ativo'].str.upper() == 'SIM']
-                return df
+            if not df.empty and 'ativo' in df.columns:
+                df = df[df['ativo'].str.upper() == 'SIM']
+            return df
         except Exception as e:
             st.error(f"Erro ao carregar clientes: {str(e)}")
-
+    
     # Fallback para CSV
     if os.path.exists(CLIENTES_CSV):
         df = pd.read_csv(CLIENTES_CSV)
         if 'ativo' in df.columns:
             df = df[df['ativo'].str.upper() == 'SIM']
         return df
-
-    # Retorna DataFrame vazio se não houver clientes
-    return pd.DataFrame(columns=['nome', 'endereco', 'telefone', 'email', 'responsavel'])
-
+    
+    return pd.DataFrame()
 
 def get_cliente_by_nome(nome):
     """Busca cliente pelo nome"""
@@ -182,15 +174,133 @@ def get_cliente_by_nome(nome):
             return cliente.iloc[0]
     return None
 
+# --- Funções para Peças ---
+def load_pecas():
+    """Carrega lista de peças do Google Sheets"""
+    client_info = get_client_and_worksheets()
+    
+    if client_info and client_info["pecas"]:
+        try:
+            df = read_from_sheet(client_info["pecas"])
+            if not df.empty and 'ativo' in df.columns:
+                df = df[df['ativo'].str.upper() == 'SIM']
+            return df
+        except Exception as e:
+            st.error(f"Erro ao carregar peças: {str(e)}")
+    
+    # Fallback para CSV
+    if os.path.exists(PECAS_CSV):
+        df = pd.read_csv(PECAS_CSV)
+        if 'ativo' in df.columns:
+            df = df[df['ativo'].str.upper() == 'SIM']
+        return df
+    
+    return pd.DataFrame()
+
+def get_peca_by_codigo(codigo):
+    """Busca peça pelo código"""
+    pecas_df = load_pecas()
+    if not pecas_df.empty:
+        peca = pecas_df[pecas_df['codigo'] == codigo]
+        if not peca.empty:
+            return peca.iloc[0]
+    return None
+
+def get_campos_por_peca(codigo_peca):
+    """Retorna os campos específicos para uma peça"""
+    pecas_df = load_pecas()
+    if not pecas_df.empty and 'campos_especificos' in pecas_df.columns:
+        peca = pecas_df[pecas_df['codigo'] == codigo_peca]
+        if not peca.empty:
+            campos_str = peca.iloc[0]['campos_especificos']
+            if pd.notna(campos_str) and campos_str != '':
+                return [campo.strip() for campo in campos_str.split(',')]
+    return []
+
+def render_campos_dinamicos(campos):
+    """Renderiza campos dinâmicos baseado na lista"""
+    valores = {}
+    
+    if not campos:
+        return valores
+    
+    st.subheader("📋 Informações Específicas da Peça")
+    
+    for campo in campos:
+        if campo == 'pavimento':
+            valores['pavimento'] = st.selectbox(
+                "Pavimento/Cabine",
+                ["Térreo", "1º Andar", "2º Andar", "3º Andar", "4º Andar", "Cabine", "Todos"]
+            )
+        elif campo == 'marca':
+            valores['marca'] = st.text_input("Marca")
+        elif campo == 'modelo':
+            valores['modelo'] = st.text_input("Modelo")
+        elif campo == 'quantidade':
+            valores['quantidade'] = st.number_input("Quantidade", min_value=1, value=1)
+        elif campo == 'tipo':
+            valores['tipo'] = st.selectbox(
+                "Tipo",
+                ["Simples", "Duplo", "Com LED", "Emergência", "Tátil", "Comum"]
+            )
+        elif campo == 'voltagem':
+            valores['voltagem'] = st.selectbox(
+                "Voltagem",
+                ["110V", "220V", "24V", "12V", "380V"]
+            )
+        elif campo == 'cor':
+            valores['cor'] = st.selectbox(
+                "Cor",
+                ["Branco", "Preto", "Cinza", "Vermelho", "Azul", "Verde", "Personalizado"]
+            )
+        elif campo == 'potencia':
+            valores['potencia'] = st.selectbox(
+                "Potência",
+                ["1/4 HP", "1/2 HP", "3/4 HP", "1 HP", "1.5 HP", "2 HP", "3 HP", "5 HP"]
+            )
+        elif campo == 'tensao':
+            valores['tensao'] = st.selectbox(
+                "Tensão",
+                ["110V", "220V", "380V", "440V", "Bivolt"]
+            )
+        elif campo == 'rotacao':
+            valores['rotacao'] = st.selectbox(
+                "Rotação",
+                ["1200 RPM", "1800 RPM", "3600 RPM", "Variável"]
+            )
+        elif campo == 'polegadas':
+            valores['polegadas'] = st.selectbox(
+                "Polegadas",
+                ["7''", "10''", "15''", "17''", "19''", "21''", "24''"]
+            )
+        elif campo == 'resolucao':
+            valores['resolucao'] = st.selectbox(
+                "Resolução",
+                ["640x480", "800x600", "1024x768", "1280x1024", "1920x1080"]
+            )
+        elif campo == 'material':
+            valores['material'] = st.selectbox(
+                "Material",
+                ["Aço", "Alumínio", "Plástico", "Bronze", "Latão", "Inox"]
+            )
+        elif campo == 'diametro':
+            valores['diametro'] = st.text_input("Diâmetro (mm)")
+        elif campo == 'comprimento':
+            valores['comprimento'] = st.text_input("Comprimento (mm)")
+        else:
+            # Campo genérico para qualquer outro
+            valores[campo] = st.text_input(f"{campo.replace('_', ' ').title()}")
+    
+    return valores
 
 # --- Funções para CVT ---
 def append_cvt(data):
     """Salva CVT no Google Sheets ou CSV"""
     client_info = get_client_and_worksheets()
-
+    
     # Gera número único para CVT
     numero_cvt = f"CVT-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
-
+    
     row = [
         datetime.datetime.now().isoformat(),
         data["tecnico"],
@@ -202,7 +312,7 @@ def append_cvt(data):
         "SALVO",
         numero_cvt
     ]
-
+    
     if client_info and client_info["cvt"]:
         success = append_to_sheet(client_info["cvt"], row)
         if success:
@@ -217,14 +327,13 @@ def append_cvt(data):
         df.to_csv(CVT_CSV, index=False)
         st.success(f"CVT {numero_cvt} salva localmente!")
         return numero_cvt
-
+    
     return None
-
 
 def read_all_cvt():
     """Lê todas as CVTs"""
     client_info = get_client_and_worksheets()
-
+    
     if client_info and client_info["cvt"]:
         return read_from_sheet(client_info["cvt"])
     else:
@@ -232,12 +341,11 @@ def read_all_cvt():
             return pd.read_csv(CVT_CSV)
         return pd.DataFrame(columns=CVT_COLUMNS)
 
-
 # --- Funções para Requisições ---
 def append_requisicao(data):
     """Salva requisição de peças"""
     client_info = get_client_and_worksheets()
-
+    
     row = [
         datetime.datetime.now().isoformat(),
         data["tecnico"],
@@ -250,7 +358,7 @@ def append_requisicao(data):
         data.get("prioridade", "NORMAL"),
         data.get("observacoes", "")
     ]
-
+    
     if client_info and client_info["req"]:
         success = append_to_sheet(client_info["req"], row)
         if success:
@@ -263,11 +371,10 @@ def append_requisicao(data):
         df.to_csv(REQ_CSV, index=False)
         st.success("Requisição salva localmente!")
 
-
 def read_all_requisicoes():
     """Lê todas as requisições"""
     client_info = get_client_and_worksheets()
-
+    
     if client_info and client_info["req"]:
         return read_from_sheet(client_info["req"])
     else:
@@ -275,21 +382,20 @@ def read_all_requisicoes():
             return pd.read_csv(REQ_CSV)
         return pd.DataFrame(columns=REQ_COLUMNS)
 
-
 # --- Sistema de Autenticação ---
 def load_users():
     """Carrega usuários do Google Sheets ou CSV"""
     client_info = get_client_and_worksheets()
-
+    
     if client_info and client_info["users"]:
         users_df = read_from_sheet(client_info["users"])
         if not users_df.empty:
             return users_df.to_dict('records')
-
+    
     # Fallback para CSV
     if os.path.exists(USERS_CSV):
         return pd.read_csv(USERS_CSV).to_dict('records')
-
+    
     # Usuários padrão
     return [
         {"username": "tecnico1", "password": "123", "role": "TECNICO", "nome": "João Silva"},
@@ -297,23 +403,22 @@ def load_users():
         {"username": "supervisor", "password": "admin", "role": "SUPERVISOR", "nome": "Carlos Oliveira"}
     ]
 
-
 def login_form():
     """Formulário de login"""
     st.markdown("## 🔐 Login - Sistema CVT")
-
+    
     with st.form("login_form"):
         username = st.text_input("Usuário")
         password = st.text_input("Senha", type="password")
         submit = st.form_submit_button("Entrar")
-
+        
         if submit:
             users = load_users()
             user_match = next(
                 (u for u in users if u["username"] == username and str(u["password"]) == str(password)),
                 None
             )
-
+            
             if user_match:
                 st.session_state.update({
                     "authenticated": True,
@@ -326,7 +431,6 @@ def login_form():
             else:
                 st.error("Usuário ou senha inválidos")
 
-
 def logout():
     """Realiza logout"""
     for key in ["authenticated", "username", "role", "user_nome"]:
@@ -334,70 +438,115 @@ def logout():
             del st.session_state[key]
     st.rerun()
 
-
 # --- Componente para Adicionar Peças ---
 def pecas_modal(numero_cvt):
-    """Modal para adicionar peças à CVT"""
+    """Modal para adicionar peças à CVT com campos dinâmicos"""
     st.markdown("---")
     st.subheader("➕ Adicionar Peça à Requisição")
-
+    
+    # Carrega lista de peças
+    pecas_df = load_pecas()
+    
     with st.form(f"peca_form_{numero_cvt}"):
         col1, col2 = st.columns([1, 2])
-
+        
         with col1:
-            codigo_peca = st.text_input("Código da Peça *")
-            descricao_peca = st.text_input("Descrição da Peça *")
-
-        with col2:
-            quantidade = st.number_input("Quantidade *", min_value=1, value=1)
-            prioridade = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"])
-            observacoes = st.text_area("Observações", placeholder="Observações específicas sobre esta peça...")
-
-        submitted = st.form_submit_button("✅ Adicionar Peça")
-
-        if submitted:
-            if codigo_peca and descricao_peca:
-                req_data = {
-                    "tecnico": st.session_state["user_nome"],
-                    "numero_cvt": numero_cvt,
-                    "peca_codigo": codigo_peca,
-                    "peca_descricao": descricao_peca,
-                    "quantidade": quantidade,
-                    "prioridade": prioridade,
-                    "observacoes": observacoes
-                }
-                append_requisicao(req_data)
-                st.success(f"Peça {descricao_peca} adicionada com sucesso!")
-                return True
+            if not pecas_df.empty:
+                # Seleção por código ou descrição
+                peca_options = pecas_df[['codigo', 'descricao', 'categoria']].apply(
+                    lambda x: f"{x['codigo']} - {x['descricao']} ({x['categoria']})", axis=1
+                ).tolist()
+                peca_selecionada = st.selectbox("Selecionar Peça *", options=[""] + peca_options)
+                
+                if peca_selecionada:
+                    codigo_peca = peca_selecionada.split(" - ")[0]
+                    peca_info = get_peca_by_codigo(codigo_peca)
+                    if peca_info is not None:
+                        st.text_input("Código", value=peca_info['codigo'], disabled=True)
+                        st.text_input("Descrição", value=peca_info['descricao'], disabled=True)
+                        st.text_input("Categoria", value=peca_info.get('categoria', 'N/A'), disabled=True)
+                        
+                        # Campos dinâmicos baseados na peça selecionada
+                        campos_especificos = get_campos_por_peca(codigo_peca)
+                        valores_campos = render_campos_dinamicos(campos_especificos)
             else:
-                st.error("Preencha código e descrição da peça")
-
+                st.info("Nenhuma peça cadastrada")
+                codigo_peca = st.text_input("Código da Peça *")
+                descricao_peca = st.text_input("Descrição da Peça *")
+                campos_especificos = []
+        
+        with col2:
+            quantidade_geral = st.number_input("Quantidade Total *", min_value=1, value=1)
+            prioridade = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"])
+            observacoes = st.text_area("Observações Gerais", placeholder="Observações adicionais sobre esta peça...")
+        
+        submitted = st.form_submit_button("✅ Adicionar Peça")
+        
+        if submitted:
+            if not pecas_df.empty and peca_selecionada:
+                # Usa peça do cadastro
+                peca_info = get_peca_by_codigo(codigo_peca)
+                if peca_info is not None:
+                    # Prepara dados extras dos campos dinâmicos
+                    dados_extras = ""
+                    if 'valores_campos' in locals() and valores_campos:
+                        dados_extras = " | ".join([f"{k}: {v}" for k, v in valores_campos.items()])
+                    
+                    req_data = {
+                        "tecnico": st.session_state["user_nome"],
+                        "numero_cvt": numero_cvt,
+                        "peca_codigo": peca_info['codigo'],
+                        "peca_descricao": f"{peca_info['descricao']} [{dados_extras}]" if dados_extras else peca_info['descricao'],
+                        "quantidade": quantidade_geral,
+                        "prioridade": prioridade,
+                        "observacoes": observacoes
+                    }
+                    append_requisicao(req_data)
+                    st.success(f"Peça {peca_info['descricao']} adicionada com sucesso!")
+                    return True
+            else:
+                # Peça manual
+                if codigo_peca and descricao_peca:
+                    req_data = {
+                        "tecnico": st.session_state["user_nome"],
+                        "numero_cvt": numero_cvt,
+                        "peca_codigo": codigo_peca,
+                        "peca_descricao": descricao_peca,
+                        "quantidade": quantidade_geral,
+                        "prioridade": prioridade,
+                        "observacoes": observacoes
+                    }
+                    append_requisicao(req_data)
+                    st.success(f"Peça {descricao_peca} adicionada com sucesso!")
+                    return True
+                else:
+                    st.error("Preencha código e descrição da peça")
+    
     return False
-
 
 # --- Componentes da Interface ---
 def cvt_form():
     """Formulário para preenchimento de CVT"""
     st.header("📝 Comprovante de Visita Técnica")
-
+    
     # Carrega lista de clientes
     clientes_df = load_clientes()
-
+    
     with st.form("cvt_form", clear_on_submit=False):
         st.subheader("Dados da Visita")
-
+        
         # Seleção de cliente
         col1, col2 = st.columns([2, 1])
-
+        
         with col1:
             if not clientes_df.empty and 'nome' in clientes_df.columns:
                 cliente_options = clientes_df['nome'].tolist()
                 cliente_selecionado = st.selectbox(
-                    "Cliente *",
+                    "Cliente *", 
                     options=[""] + cliente_options,
                     help="Selecione o cliente da lista"
                 )
-
+                
                 # Busca endereço automaticamente quando cliente é selecionado
                 endereco_cliente = ""
                 cliente_info = None
@@ -409,7 +558,7 @@ def cvt_form():
                 st.info("Nenhum cliente cadastrado na base de dados")
                 cliente_selecionado = st.text_input("Cliente *", placeholder="Nome do cliente")
                 endereco_cliente = st.text_input("Endereço *", placeholder="Endereço completo")
-
+        
         with col2:
             # Mostra informações do cliente selecionado
             if cliente_selecionado and cliente_info is not None:
@@ -418,20 +567,20 @@ def cvt_form():
                     st.text(f"📞 {cliente_info.get('telefone', 'N/A')}")
                 if 'responsavel' in cliente_info:
                     st.text(f"👤 {cliente_info.get('responsavel', 'N/A')}")
-
+        
         # Endereço (preenchido automaticamente ou manual)
-        endereco = st.text_input("Endereço *", value=endereco_cliente,
-                                 placeholder="Endereço completo da visita")
-
-        servico_realizado = st.text_area("Serviço Realizado/Diagnóstico *",
-                                         placeholder="Descreva detalhadamente o serviço executado...",
-                                         height=100)
-        observacoes = st.text_area("Observações Adicionais",
-                                   placeholder="Observações, recomendações, etc...",
-                                   height=80)
-
+        endereco = st.text_input("Endereço *", value=endereco_cliente, 
+                               placeholder="Endereço completo da visita")
+        
+        servico_realizado = st.text_area("Serviço Realizado/Diagnóstico *", 
+                                       placeholder="Descreva detalhadamente o serviço executado...",
+                                       height=100)
+        observacoes = st.text_area("Observações Adicionais", 
+                                 placeholder="Observações, recomendações, etc...",
+                                 height=80)
+        
         submitted = st.form_submit_button("✅ Salvar CVT")
-
+        
         if submitted:
             if not all([cliente_selecionado, endereco, servico_realizado]):
                 st.error("Preencha todos os campos obrigatórios (*)")
@@ -445,7 +594,7 @@ def cvt_form():
                     "pecas_requeridas": ""
                 }
                 numero_cvt = append_cvt(cvt_data)
-
+                
                 if numero_cvt:
                     # Mostra opção para adicionar peças após salvar a CVT
                     st.session_state['cvt_salva'] = True
@@ -455,31 +604,31 @@ def cvt_form():
     # Se a CVT foi salva, mostra opção para adicionar peças
     if st.session_state.get('cvt_salva', False):
         numero_cvt = st.session_state.get('numero_cvt_salva')
-
+        
         st.success(f"CVT {numero_cvt} salva com sucesso!")
-
+        
         # Opções pós-salvamento
         col1, col2, col3 = st.columns(3)
-
+        
         with col1:
             if st.button("➕ Adicionar Peças à Esta CVT", type="primary"):
                 st.session_state['adicionar_pecas'] = True
-
+        
         with col2:
             if st.button("📋 Ver Minhas CVTs"):
                 st.session_state['mostrar_minhas_cvts'] = True
-
+        
         with col3:
             if st.button("📝 Nova CVT"):
                 st.session_state['cvt_salva'] = False
                 st.session_state['adicionar_pecas'] = False
                 st.session_state['mostrar_minhas_cvts'] = False
                 st.rerun()
-
+        
         # Modal para adicionar peças
         if st.session_state.get('adicionar_pecas', False):
             pecas_modal(numero_cvt)
-
+            
             # Botão para finalizar
             if st.button("✅ Finalizar CVT e Peças"):
                 st.session_state['cvt_salva'] = False
@@ -487,13 +636,13 @@ def cvt_form():
                 st.success("CVT finalizada com sucesso!")
                 time.sleep(2)
                 st.rerun()
-
+        
         # Mostrar CVTs do técnico
         if st.session_state.get('mostrar_minhas_cvts', False):
             st.subheader("📋 Minhas CVTs Recentes")
             cvt_df = read_all_cvt()
             user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
-
+            
             if not user_cvts.empty:
                 display_cols = ["numero_cvt", "cliente", "endereco", "created_at", "status_cvt"]
                 display_df = user_cvts[display_cols].copy()
@@ -502,122 +651,148 @@ def cvt_form():
             else:
                 st.info("Nenhuma CVT encontrada.")
 
-
 def requisicoes_form():
-    """Formulário para requisição de peças"""
+    """Formulário para requisição de peças com campos dinâmicos"""
     st.header("🛠️ Requisição de Peças")
-
-    # Carrega CVTs do técnico para referência
-    cvt_df = read_all_cvt()
-    user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
-
+    
+    # Carrega peças para seleção
+    pecas_df = load_pecas()
+    
     with st.form("req_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
-
+        
         with col1:
-            # Seleciona CVT relacionada se existir
-            if not user_cvts.empty:
-                cvt_options = user_cvts[["numero_cvt", "cliente"]].apply(
-                    lambda x: f"{x['numero_cvt']} - {x['cliente']}", axis=1
+            if not pecas_df.empty:
+                peca_options = pecas_df[['codigo', 'descricao', 'categoria']].apply(
+                    lambda x: f"{x['codigo']} - {x['descricao']} ({x['categoria']})", axis=1
                 ).tolist()
-                cvt_selecionada = st.selectbox("CVT Relacionada (Opcional)", [""] + cvt_options)
-                numero_cvt = cvt_selecionada.split(" - ")[0] if cvt_selecionada else ""
+                peca_selecionada = st.selectbox("Selecionar Peça *", options=[""] + peca_options)
+                
+                if peca_selecionada:
+                    codigo_peca = peca_selecionada.split(" - ")[0]
+                    peca_info = get_peca_by_codigo(codigo_peca)
+                    if peca_info is not None:
+                        st.text_input("Código", value=peca_info['codigo'], disabled=True)
+                        st.text_input("Descrição", value=peca_info['descricao'], disabled=True)
+                        
+                        # Campos dinâmicos
+                        campos_especificos = get_campos_por_peca(codigo_peca)
+                        valores_campos = render_campos_dinamicos(campos_especificos)
             else:
-                numero_cvt = st.text_input("Número CVT (Opcional)", placeholder="CVT-20241201-120000")
-
+                st.info("Nenhuma peça cadastrada")
+                codigo_peca = st.text_input("Código da Peça *")
+                descricao_peca = st.text_input("Descrição da Peça *")
+            
             ordem_id = st.text_input("Ordem de Serviço (Opcional)", placeholder="OS-12345")
             prioridade = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"])
-
+        
         with col2:
-            codigo_peca = st.text_input("Código da Peça *", placeholder="Código interno da peça")
-            descricao_peca = st.text_input("Descrição da Peça *", placeholder="Descrição detalhada")
             quantidade = st.number_input("Quantidade *", min_value=1, value=1)
-
-        observacoes = st.text_area("Observações da Requisição", placeholder="Informações adicionais...")
-
+            observacoes = st.text_area("Observações da Requisição", placeholder="Informações adicionais...")
+        
         submitted = st.form_submit_button("📦 Registrar Requisição")
-
+        
         if submitted:
-            if not all([codigo_peca, descricao_peca]):
-                st.error("Preencha todos os campos obrigatórios (*)")
+            if not pecas_df.empty:
+                if not peca_selecionada:
+                    st.error("Selecione uma peça da lista")
+                else:
+                    peca_info = get_peca_by_codigo(codigo_peca)
+                    # Prepara dados extras dos campos dinâmicos
+                    dados_extras = ""
+                    if 'valores_campos' in locals() and valores_campos:
+                        dados_extras = " | ".join([f"{k}: {v}" for k, v in valores_campos.items()])
+                    
+                    req_data = {
+                        "tecnico": st.session_state["user_nome"],
+                        "numero_cvt": "",
+                        "ordem_id": ordem_id,
+                        "peca_codigo": peca_info['codigo'],
+                        "peca_descricao": f"{peca_info['descricao']} [{dados_extras}]" if dados_extras else peca_info['descricao'],
+                        "quantidade": quantidade,
+                        "prioridade": prioridade,
+                        "observacoes": observacoes
+                    }
+                    append_requisicao(req_data)
             else:
-                req_data = {
-                    "tecnico": st.session_state["user_nome"],
-                    "numero_cvt": numero_cvt,
-                    "ordem_id": ordem_id,
-                    "peca_codigo": codigo_peca,
-                    "peca_descricao": descricao_peca,
-                    "quantidade": quantidade,
-                    "prioridade": prioridade,
-                    "observacoes": observacoes
-                }
-                append_requisicao(req_data)
-
+                if not all([codigo_peca, descricao_peca]):
+                    st.error("Preencha todos os campos obrigatórios (*)")
+                else:
+                    req_data = {
+                        "tecnico": st.session_state["user_nome"],
+                        "numero_cvt": "",
+                        "ordem_id": ordem_id,
+                        "peca_codigo": codigo_peca,
+                        "peca_descricao": descricao_peca,
+                        "quantidade": quantidade,
+                        "prioridade": prioridade,
+                        "observacoes": observacoes
+                    }
+                    append_requisicao(req_data)
 
 def minhas_requisicoes():
     """Mostra requisições do técnico logado"""
     st.header("📋 Minhas Requisições")
-
+    
     df = read_all_requisicoes()
     if df.empty:
         st.info("Nenhuma requisição encontrada.")
         return
-
+    
     user_reqs = df[df["tecnico"] == st.session_state["user_nome"]]
-
+    
     if user_reqs.empty:
         st.info("Você não possui requisições registradas.")
         return
-
+    
     # Filtros
     col1, col2, col3 = st.columns(3)
     with col1:
-        status_filter = st.selectbox("Filtrar por status",
-                                     ["Todos"] + sorted(user_reqs["status"].unique()))
+        status_filter = st.selectbox("Filtrar por status", 
+                                   ["Todos"] + sorted(user_reqs["status"].unique()))
     with col2:
         prioridade_filter = st.selectbox("Filtrar por prioridade",
-                                         ["Todas"] + sorted(user_reqs["prioridade"].unique()))
-
+                                       ["Todas"] + sorted(user_reqs["prioridade"].unique()))
+    
     # Aplicar filtros
     filtered_reqs = user_reqs.copy()
     if status_filter != "Todos":
         filtered_reqs = filtered_reqs[filtered_reqs["status"] == status_filter]
     if prioridade_filter != "Todas":
         filtered_reqs = filtered_reqs[filtered_reqs["prioridade"] == prioridade_filter]
-
+    
     # Mostrar resultados
     st.write(f"**Total de requisições:** {len(filtered_reqs)}")
-
+    
     # Formatação da tabela
     display_cols = ["created_at", "numero_cvt", "peca_descricao", "quantidade", "status", "prioridade"]
     display_df = filtered_reqs[display_cols].copy()
     display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
-
+    
     st.dataframe(display_df.sort_values("created_at", ascending=False), use_container_width=True)
-
 
 def supervisor_panel():
     """Painel exclusivo para supervisores"""
     if st.session_state["role"] != "SUPERVISOR":
         st.error("⛔ Acesso restrito a supervisores")
         return
-
+    
     st.header("👨‍💼 Painel do Supervisor")
-
+    
     tab1, tab2, tab3 = st.tabs([
-        "📦 Todas as Requisições",
-        "📊 Estatísticas",
+        "📦 Todas as Requisições", 
+        "📊 Estatísticas", 
         "👥 CVTs dos Técnicos"
     ])
-
+    
     with tab1:
         st.subheader("Gestão de Requisições")
-
+        
         df = read_all_requisicoes()
         if df.empty:
             st.info("Nenhuma requisição encontrada.")
             return
-
+        
         # Filtros para supervisor
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -626,7 +801,7 @@ def supervisor_panel():
             status_filter = st.selectbox("Status", ["Todos"] + sorted(df["status"].unique()))
         with col3:
             prioridade_filter = st.selectbox("Prioridade", ["Todas"] + sorted(df["prioridade"].unique()))
-
+        
         # Aplicar filtros
         filtered_df = df.copy()
         if tecnico_filter != "Todos":
@@ -635,52 +810,51 @@ def supervisor_panel():
             filtered_df = filtered_df[filtered_df["status"] == status_filter]
         if prioridade_filter != "Todas":
             filtered_df = filtered_df[filtered_df["prioridade"] == prioridade_filter]
-
+        
         st.write(f"**Requisições encontradas:** {len(filtered_df)}")
-
+        
         # Exibir tabela
         st.dataframe(filtered_df.sort_values("created_at", ascending=False), use_container_width=True)
-
+    
     with tab2:
         st.subheader("Estatísticas e Relatórios")
-
+        
         df = read_all_requisicoes()
         if not df.empty:
             col1, col2, col3 = st.columns(3)
-
+            
             with col1:
                 total = len(df)
                 pendentes = len(df[df["status"] == "PENDENTE"])
                 st.metric("Total Requisições", total)
                 st.metric("Pendentes", pendentes)
-
+            
             with col2:
                 tecnicos = df["tecnico"].nunique()
                 st.metric("Técnicos Ativos", tecnicos)
-
+            
             with col3:
                 urgentes = len(df[df["prioridade"] == "URGENTE"])
                 st.metric("Urgentes", urgentes)
-
+            
             # Gráfico simples de status
             st.bar_chart(df["status"].value_counts())
         else:
             st.info("Nenhuma requisição encontrada para estatísticas.")
-
+    
     with tab3:
         st.subheader("CVTs dos Técnicos")
-
+        
         cvt_df = read_all_cvt()
         if not cvt_df.empty:
             st.dataframe(cvt_df.sort_values("created_at", ascending=False), use_container_width=True)
         else:
             st.info("Nenhuma CVT encontrada.")
 
-
 # --- Interface Principal ---
 def main_interface():
     """Interface principal do aplicativo"""
-
+    
     # Header com informações do usuário
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
@@ -694,7 +868,7 @@ def main_interface():
     with col3:
         if st.button("🚪 Sair", use_container_width=True):
             logout()
-
+    
     # Menu de navegação
     if st.session_state["role"] == "SUPERVISOR":
         menu_options = ["📝 Nova CVT", "🛠️ Requisição", "📋 Minhas Req", "👨‍💼 Supervisor"]
@@ -704,7 +878,7 @@ def main_interface():
         menu_options = ["📝 Nova CVT", "🛠️ Requisição", "📋 Minhas Req"]
         menu_icons = ["file-earmark-text", "tools", "clipboard"]
         default_index = 0
-
+    
     with st.container():
         selected = option_menu(
             menu_title=None,
@@ -714,12 +888,12 @@ def main_interface():
             orientation="horizontal",
             styles={
                 "container": {"padding": "0!important", "background-color": "#f0f2f6"},
-                "icon": {"color": "orange", "font-size": "18px"},
-                "nav-link": {"font-size": "16px", "text-align": "center", "margin": "0px", "--hover-color": "#eee"},
+                "icon": {"color": "orange", "font-size": "18px"}, 
+                "nav-link": {"font-size": "16px", "text-align": "center", "margin":"0px", "--hover-color": "#eee"},
                 "nav-link-selected": {"background-color": "#2E86AB"},
             }
         )
-
+    
     # Conteúdo baseado na seleção
     if selected == "📝 Nova CVT":
         cvt_form()
@@ -730,11 +904,10 @@ def main_interface():
     elif selected == "👨‍💼 Supervisor":
         supervisor_panel()
 
-
 # --- App Principal ---
 def main():
     """Função principal do aplicativo"""
-
+    
     # Inicialização da sessão
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -744,11 +917,11 @@ def main():
         st.session_state.adicionar_pecas = False
     if "mostrar_minhas_cvts" not in st.session_state:
         st.session_state.mostrar_minhas_cvts = False
-
+    
     # Verifica autenticação
     if not st.session_state.authenticated:
         login_form()
-
+        
         # Footer informativo
         st.markdown("---")
         st.markdown(
@@ -758,7 +931,6 @@ def main():
         )
     else:
         main_interface()
-
 
 if __name__ == "__main__":
     main()
