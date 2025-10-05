@@ -230,7 +230,7 @@ def render_campos_dinamicos(campos):
         if campo == 'pavimento':
             valores['pavimento'] = st.selectbox(
                 "Pavimento/Cabine",
-                ["Térreo", "1º Andar", "2º Andar", "3º Andar", "4º Andar", "Cabine", "Todos"]
+                ["Térreo", "1º Andar", "2º Andar", "3º Andar", "4º Andar", "5° Andar", "6° Andar", "Cabine", "Todos"]
             )
         elif campo == 'marca':
             valores['marca'] = st.text_input("Marca")
@@ -849,12 +849,12 @@ def supervisor_panel():
         st.error("⛔ Acesso restrito a supervisores")
         return
     
-    st.header("👨‍💼 Painel do Supervisor")
+    st.header("Painel de Gerenciamento")
     
     tab1, tab2, tab3 = st.tabs([
         "📦 Todas as Requisições", 
         "📊 Estatísticas", 
-        "👥 CVTs dos Técnicos"
+        "👥 CVTs"
     ])
     
     with tab1:
@@ -938,12 +938,12 @@ def main_interface():
         st.title("Sistema CVT")
         st.caption(f"Logado como: {st.session_state['user_nome']} ({st.session_state['role']})")
     with col3:
-        if st.button("🚪 Sair", use_container_width=True):
+        if st.button("Sair", use_container_width=True):
             logout()
     
     # Menu de navegação - REMOVIDA A ABA "REQUISIÇÃO"
     if st.session_state["role"] == "SUPERVISOR":
-        menu_options = ["📝 Nova CVT", "📋 Minhas Req", "👨‍💼 Supervisor"]
+        menu_options = ["📝 Nova CVT", "📋 Minhas Req", "Gerenciamento"]
         menu_icons = ["file-earmark-text", "clipboard", "person-badge"]
         default_index = 0
     else:
@@ -971,7 +971,7 @@ def main_interface():
         cvt_form()
     elif selected == "📋 Minhas Req":
         minhas_requisicoes()
-    elif selected == "👨‍💼 Supervisor":
+    elif selected == "Gerenciamento":
         supervisor_panel()
 
 # --- App Principal ---
