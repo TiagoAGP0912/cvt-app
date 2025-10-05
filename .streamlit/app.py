@@ -487,7 +487,7 @@ def seccion_pecas_cvt():
                 descricao_peca = st.text_input("Descrição da Peça", placeholder="Descrição detalhada")
         
         with col2:
-            prioridade_temp = st.selectbox("Prioridade", ["NORMAL", "URGENTE", "CRÍTICA"], key="prio_peca_select")
+            prioridade_temp = st.selectbox("Prioridade", ["NORMAL", "URGENTE"], key="prio_peca_select")
             observacoes_temp = st.text_area("Observações", placeholder="Observações específicas...", key="obs_peca_select")
         
         abrir_campos = st.form_submit_button("➕ Abrir Campos para Detalhes")
@@ -537,8 +537,8 @@ def seccion_pecas_cvt():
             quantidade = st.number_input("Quantidade", min_value=1, value=1, key="qtd_peca_edit")
             prioridade = st.selectbox(
                 "Prioridade",
-                ["NORMAL", "URGENTE", "CRÍTICA"],
-                index=["NORMAL", "URGENTE", "CRÍTICA"].index(st.session_state.peca_temp_campos.get('prioridade', 'NORMAL')),
+                ["NORMAL", "URGENTE"],
+                index=["NORMAL", "URGENTE"].index(st.session_state.peca_temp_campos.get('prioridade', 'NORMAL')),
                 key="prio_peca_edit"
             )
             observacoes_peca = st.text_area(
