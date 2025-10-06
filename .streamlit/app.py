@@ -930,6 +930,7 @@ def cvt_form():
                 st.session_state.mostrar_minhas_cvts = True
         
      # Se a CVT foi salva, mostra opções pós-salvamento
+    # Se a CVT foi salva, mostra opções pós-salvamento
     if st.session_state.get('cvt_salva', False):
         numero_cvt = st.session_state.get('numero_cvt_salva')
         st.success(f"CVT {numero_cvt} processada com sucesso!")
@@ -968,7 +969,7 @@ def cvt_form():
             with col_pos2:
                 if st.button("📋 Ver Minhas CVTs"):
                     st.session_state.mostrar_minhas_cvts = True
-                    st.rerun()
+                    st.rerrun()
 
     # Seção para visualizar CVTs anteriores - FORA DO BLOCO ANTERIOR
     if st.session_state.get('mostrar_minhas_cvts', False):
@@ -979,7 +980,12 @@ def cvt_form():
         if not user_cvts.empty:
             display_cols = ["numero_cvt", "cliente", "endereco", "elevador", "created_at", "status_cvt"]
             display_df = user_cvts[display_cols].copy()
-            display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
+            
+            # Converte a data para formato legível
+            try:
+                display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
+            except:
+                display_df["created_at"] = display_df["created_at"].astype(str)
             
             # Mostra a tabela
             st.dataframe(display_df.sort_values("created_at", ascending=False).head(10), use_container_width=True)
@@ -987,34 +993,51 @@ def cvt_form():
             # Adiciona opção de baixar PDF para cada CVT
             st.subheader("📄 Baixar PDF de CVTs Anteriores")
             
-            cvts_para_download = display_df.head(5)  # Mostra apenas as 5 mais recentes
-            
-            for _, cvt_row in cvts_para_download.iterrows():
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(f"**{cvt_row['numero_cvt']}** - {cvt_row['cliente']} ({cvt_row['created_at']})")
-                with col2:
-                    # Busca dados completos
-                    cvt_completa = cvt_df[cvt_df['numero_cvt'] == cvt_row['numero_cvt']].iloc[0].to_dict()
+            # Seleção de CVT para download
+            cvts_options = display_df['numero_cvt'].tolist()
+            if cvts_options:
+                cvt_selecionada = st.selectbox(
+                    "Selecione uma CVT para gerar PDF:",
+                    options=cvts_options,
+                    key="select_cvt_pdf"
+                )
+                
+                if cvt_selecionada:
+                    # Busca dados completos da CVT selecionada
+                    cvt_completa_df = cvt_df[cvt_df['numero_cvt'] == cvt_selecionada]
                     
-                    # Busca peças
-                    req_df = read_all_requisicoes()
-                    pecas_cvt = req_df[req_df['numero_cvt'] == cvt_row['numero_cvt']]
-                    pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
-                    
-                    # Gera e faz download do PDF
-                    pdf = gerar_pdf_cvt(cvt_completa, pecas_lista)
-                    pdf_output = pdf.output(dest='S').encode('latin-1')
-                    
-                    st.download_button(
-                        label="Baixar PDF",
-                        data=pdf_output,
-                        file_name=f"CVT_{cvt_row['numero_cvt']}.pdf",
-                        mime="application/pdf",
-                        key=f"download_{cvt_row['numero_cvt']}"
-                    )
+                    if not cvt_completa_df.empty:
+                        cvt_completa = cvt_completa_df.iloc[0].to_dict()
+                        
+                        # Busca peças
+                        req_df = read_all_requisicoes()
+                        pecas_cvt = req_df[req_df['numero_cvt'] == cvt_selecionada]
+                        pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+                        
+                        # Gera o PDF
+                        pdf = gerar_pdf_cvt(cvt_completa, pecas_lista)
+                        pdf_output = pdf.output(dest='S').encode('latin-1')
+                        
+                        # Botão de download
+                        st.download_button(
+                            label=f"📥 Baixar PDF da CVT {cvt_selecionada}",
+                            data=pdf_output,
+                            file_name=f"CVT_{cvt_selecionada}.pdf",
+                            mime="application/pdf",
+                            key=f"download_{cvt_selecionada}",
+                            use_container_width=True
+                        )
+                    else:
+                        st.error("CVT não encontrada nos dados completos.")
+            else:
+                st.info("Nenhuma CVT disponível para download.")
         else:
             st.info("Nenhuma CVT encontrada.")
+        
+        # Botão para voltar
+        if st.button("↩️ Voltar para Nova CVT"):
+            st.session_state.mostrar_minhas_cvts = False
+            st.rerun()
 
 def minhas_requisicoes():
     """Mostra requisições do técnico logado"""
