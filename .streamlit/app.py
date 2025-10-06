@@ -929,15 +929,16 @@ def cvt_form():
             if st.button(" Ver Minhas CVTs"):
                 st.session_state.mostrar_minhas_cvts = True
         
-        if st.session_state.get('mostrar_minhas_cvts', False):
-            st.subheader(" Minhas CVTs Recentes")
-            cvt_df = read_all_cvt()
-            user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
-            
-        if not user_cvts.empty:
+       if st.session_state.get('mostrar_minhas_cvts', False):
+    st.subheader("📋 Minhas CVTs Recentes")
+    cvt_df = read_all_cvt()
+    user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
+    
+    if not user_cvts.empty:
         display_cols = ["numero_cvt", "cliente", "endereco", "elevador", "created_at", "status_cvt"]
         display_df = user_cvts[display_cols].copy()
         display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
+        
         # Mostra a tabela
         st.dataframe(display_df.sort_values("created_at", ascending=False).head(10), use_container_width=True)
         
@@ -971,8 +972,8 @@ def cvt_form():
                         mime="application/pdf",
                         key=f"download_{cvt_row['numero_cvt']}"
                     )
-            else:
-                st.info("Nenhuma CVT encontrada.")
+    else:
+        st.info("Nenhuma CVT encontrada.")
 
 def minhas_requisicoes():
     """Mostra requisições do técnico logado"""
