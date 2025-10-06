@@ -654,7 +654,7 @@ def cvt_form():
                                placeholder="Endereço completo da visita")
         #Elevador
         elevador = st.selectbox(
-            "Elevador onde foi realizado o serviço *",
+            "Elevador*",
             ["", "Principal", "Secundário", "Ambos"],
             help="Selecione em qual elevador o serviço foi realizado"
         )
