@@ -46,6 +46,7 @@ PECAS_COLUMNS = [
 ]
 
 # --- FUNÇÃO PARA GERAR PDF ---
+# --- FUNÇÃO PARA GERAR PDF ---
 def gerar_pdf_cvt(dados_cvt, pecas=None):
     """Gera um PDF da CVT com todas as informações"""
     
@@ -66,7 +67,7 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     pdf.set_font("Arial", size=11)
     
     # Dados básicos
-    pdf.cell(100, 8, txt=f"Número CVT: {dados_cvt['numero_cvt']}", ln=1)
+    pdf.cell(100, 8, txt=f"Número CVT: {dados_cvt.get('numero_cvt', 'N/A')}", ln=1)
     
     # Formata data
     if 'created_at' in dados_cvt:
@@ -75,11 +76,11 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
             data_formatada = data_obj.strftime("%d/%m/%Y %H:%M")
             pdf.cell(100, 8, txt=f"Data/Hora: {data_formatada}", ln=1)
         except:
-            pdf.cell(100, 8, txt=f"Data/Hora: {dados_cvt['created_at']}", ln=1)
+            pdf.cell(100, 8, txt=f"Data/Hora: {dados_cvt.get('created_at', 'N/A')}", ln=1)
     
-    pdf.cell(100, 8, txt=f"Técnico: {dados_cvt['tecnico']}", ln=1)
-    pdf.cell(100, 8, txt=f"Cliente: {dados_cvt['cliente']}", ln=1)
-    pdf.cell(100, 8, txt=f"Endereço: {dados_cvt['endereco']}", ln=1)
+    pdf.cell(100, 8, txt=f"Técnico: {dados_cvt.get('tecnico', 'N/A')}", ln=1)
+    pdf.cell(100, 8, txt=f"Cliente: {dados_cvt.get('cliente', 'N/A')}", ln=1)
+    pdf.cell(100, 8, txt=f"Endereço: {dados_cvt.get('endereco', 'N/A')}", ln=1)
     pdf.cell(100, 8, txt=f"Elevador: {dados_cvt.get('elevador', 'Não informado')}", ln=1)
     pdf.ln(5)
     
@@ -89,8 +90,8 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     pdf.set_font("Arial", size=11)
     
     # Quebra o texto do serviço em múltiplas linhas
-    servico = dados_cvt['servico_realizado']
-    pdf.multi_cell(0, 8, txt=servico)
+    servico = dados_cvt.get('servico_realizado', 'Não informado')
+    pdf.multi_cell(0, 8, txt=str(servico))
     pdf.ln(5)
     
     # Observações (se houver)
@@ -98,7 +99,7 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(200, 10, txt="OBSERVAÇÕES ADICIONAIS", ln=1)
         pdf.set_font("Arial", size=11)
-        pdf.multi_cell(0, 8, txt=dados_cvt['obs'])
+        pdf.multi_cell(0, 8, txt=str(dados_cvt.get('obs', '')))
         pdf.ln(5)
     
     # Seção de Peças (se houver)
@@ -119,20 +120,20 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
         pdf.set_font("Arial", size=9)
         for peca in pecas:
             # Quebra linha se a descrição for muito longa
-            descricao = peca['peca_descricao']
+            descricao = peca.get('peca_descricao', '')
             if len(descricao) > 50:
                 descricao = descricao[:47] + "..."
             
-            pdf.cell(30, 8, peca['peca_codigo'], 1)
-            pdf.cell(80, 8, descricao, 1)
-            pdf.cell(20, 8, str(peca['quantidade']), 1, 0, 'C')
-            pdf.cell(30, 8, peca['prioridade'], 1, 0, 'C')
+            pdf.cell(30, 8, str(peca.get('peca_codigo', '')), 1)
+            pdf.cell(80, 8, str(descricao), 1)
+            pdf.cell(20, 8, str(peca.get('quantidade', '')), 1, 0, 'C')
+            pdf.cell(30, 8, str(peca.get('prioridade', '')), 1, 0, 'C')
             
             # Trunca observações muito longas
             obs = peca.get('observacoes', '')
             if len(obs) > 20:
                 obs = obs[:17] + "..."
-            pdf.cell(30, 8, obs, 1, 1)
+            pdf.cell(30, 8, str(obs), 1, 1)
         
         pdf.ln(5)
     
@@ -145,11 +146,45 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
 
 def criar_botao_download_pdf(pdf, nome_arquivo):
     """Cria um botão de download para o PDF"""
-    pdf_output = pdf.output(dest='S').encode('latin-1')
-    b64_pdf = base64.b64encode(pdf_output).decode()
-    
-    href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{nome_arquivo}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; font-weight: bold;">📄 Baixar PDF da CVT</a>'
-    st.markdown(href, unsafe_allow_html=True)
+    try:
+        # Método correto para obter o conteúdo do PDF
+        pdf_output = pdf.output(dest='S')
+        
+        # Se já é uma string, apenas encode
+        if isinstance(pdf_output, str):
+            pdf_bytes = pdf_output.encode('latin-1')
+        else:
+            # Se for bytes, use diretamente
+            pdf_bytes = pdf_output
+            
+        b64_pdf = base64.b64encode(pdf_bytes).decode()
+        
+        href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{nome_arquivo}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; font-weight: bold;">📄 Baixar PDF da CVT</a>'
+        st.markdown(href, unsafe_allow_html=True)
+        
+    except Exception as e:
+        st.error(f"Erro ao gerar PDF: {str(e)}")
+        # Fallback: criar um botão de download alternativo
+        try:
+            # Salva em um arquivo temporário e lê os bytes
+            import tempfile
+            import os
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                pdf.output(tmp.name)
+                tmp.flush()
+                with open(tmp.name, 'rb') as f:
+                    pdf_bytes = f.read()
+                
+                b64_pdf = base64.b64encode(pdf_bytes).decode()
+                href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{nome_arquivo}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; font-weight: bold;">📄 Baixar PDF da CVT</a>'
+                st.markdown(href, unsafe_allow_html=True)
+                
+            # Limpa o arquivo temporário
+            os.unlink(tmp.name)
+            
+        except Exception as e2:
+            st.error(f"Erro ao criar PDF alternativo: {str(e2)}")
 
 # --- Inicialização do Google Sheets ---
 def init_gsheets():
