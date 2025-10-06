@@ -929,30 +929,71 @@ def cvt_form():
             if st.button(" Ver Minhas CVTs"):
                 st.session_state.mostrar_minhas_cvts = True
         
-       if st.session_state.get('mostrar_minhas_cvts', False):
+     # Se a CVT foi salva, mostra opções pós-salvamento
+    if st.session_state.get('cvt_salva', False):
+        numero_cvt = st.session_state.get('numero_cvt_salva')
+        st.success(f"CVT {numero_cvt} processada com sucesso!")
+
+        # --- BOTÃO PARA BAIXAR PDF ---
+        st.markdown("---")
+        st.subheader("📄 Gerar PDF da CVT")
+
+        # Busca os dados da CVT salva
+        cvt_df = read_all_cvt()
+        cvt_salva = cvt_df[cvt_df['numero_cvt'] == numero_cvt]
+        
+        if not cvt_salva.empty:
+            dados_cvt = cvt_salva.iloc[0].to_dict()
+            
+            # Busca as peças relacionadas a esta CVT
+            req_df = read_all_requisicoes()
+            pecas_cvt = req_df[req_df['numero_cvt'] == numero_cvt]
+            pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+            
+            # Gera o PDF
+            pdf = gerar_pdf_cvt(dados_cvt, pecas_lista)
+            
+            # Botão de download
+            nome_arquivo = f"CVT_{numero_cvt}.pdf"
+            criar_botao_download_pdf(pdf, nome_arquivo)
+            
+            col_pos1, col_pos2 = st.columns(2)
+            with col_pos1:
+                if st.button("➕ Nova CVT"):
+                    # Limpa tudo
+                    for key in ['cvt_salva', 'numero_cvt_salva', 'mostrar_pecas', 'pecas_adicionadas', 'dados_cvt_temp']:
+                        if key in st.session_state:
+                            del st.session_state[key]
+                    st.rerun()
+            with col_pos2:
+                if st.button("📋 Ver Minhas CVTs"):
+                    st.session_state.mostrar_minhas_cvts = True
+                    st.rerun()
+
+    # Seção para visualizar CVTs anteriores - FORA DO BLOCO ANTERIOR
+    if st.session_state.get('mostrar_minhas_cvts', False):
         st.subheader("📋 Minhas CVTs Recentes")
         cvt_df = read_all_cvt()
         user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
-    
-    if not user_cvts.empty:
-        display_cols = ["numero_cvt", "cliente", "endereco", "elevador", "created_at", "status_cvt"]
-        display_df = user_cvts[display_cols].copy()
-        display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
         
-        # Mostra a tabela
-        st.dataframe(display_df.sort_values("created_at", ascending=False).head(10), use_container_width=True)
-        
-        # Adiciona opção de baixar PDF para cada CVT
-        st.subheader("📄 Baixar PDF de CVTs Anteriores")
-        
-        cvts_para_download = display_df.head(5)  # Mostra apenas as 5 mais recentes
-        
-        for _, cvt_row in cvts_para_download.iterrows():
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.write(f"**{cvt_row['numero_cvt']}** - {cvt_row['cliente']} ({cvt_row['created_at']})")
-            with col2:
-                if st.button(f"📄 PDF", key=f"pdf_{cvt_row['numero_cvt']}"):
+        if not user_cvts.empty:
+            display_cols = ["numero_cvt", "cliente", "endereco", "elevador", "created_at", "status_cvt"]
+            display_df = user_cvts[display_cols].copy()
+            display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
+            
+            # Mostra a tabela
+            st.dataframe(display_df.sort_values("created_at", ascending=False).head(10), use_container_width=True)
+            
+            # Adiciona opção de baixar PDF para cada CVT
+            st.subheader("📄 Baixar PDF de CVTs Anteriores")
+            
+            cvts_para_download = display_df.head(5)  # Mostra apenas as 5 mais recentes
+            
+            for _, cvt_row in cvts_para_download.iterrows():
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.write(f"**{cvt_row['numero_cvt']}** - {cvt_row['cliente']} ({cvt_row['created_at']})")
+                with col2:
                     # Busca dados completos
                     cvt_completa = cvt_df[cvt_df['numero_cvt'] == cvt_row['numero_cvt']].iloc[0].to_dict()
                     
@@ -972,8 +1013,8 @@ def cvt_form():
                         mime="application/pdf",
                         key=f"download_{cvt_row['numero_cvt']}"
                     )
-    else:
-        st.info("Nenhuma CVT encontrada.")
+        else:
+            st.info("Nenhuma CVT encontrada.")
 
 def minhas_requisicoes():
     """Mostra requisições do técnico logado"""
