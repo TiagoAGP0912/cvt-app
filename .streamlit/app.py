@@ -27,7 +27,7 @@ PECAS_CSV = "pecas_local.csv"
 # Colunas das planilhas
 CVT_COLUMNS = [
     "created_at", "tecnico", "cliente", "endereco", "servico_realizado", 
-    "obs", "pecas_requeridas", "status_cvt", "numero_cvt"
+    "obs", "pecas_requeridas", "elevador", "status_cvt", "numero_cvt"
 ]
 
 REQ_COLUMNS = [
@@ -306,6 +306,7 @@ def append_cvt(data):
         data["tecnico"],
         data["cliente"],
         data["endereco"],
+        data.get("elevador", ""),
         data["servico_realizado"],
         data["obs"],
         data["pecas_requeridas"],
@@ -651,6 +652,12 @@ def cvt_form():
         # Endereço (preenchido automaticamente ou manual)
         endereco = st.text_input("Endereço *", value=endereco_cliente, 
                                placeholder="Endereço completo da visita")
+        #Elevador
+        elevador = st.selectbox(
+            "Elevador onde foi realizado o serviço *",
+            ["", "Principal", "Secundário", "Ambos"],
+            help="Selecione em qual elevador o serviço foi realizado"
+        )
         
         servico_realizado = st.text_area("Serviço Realizado/Diagnóstico *", 
                                        placeholder="Descreva detalhadamente o serviço executado...",
@@ -667,26 +674,28 @@ def cvt_form():
             salvar_sem_pecas = st.form_submit_button("✅ Salvar CVT sem Peças")
         
         if pedir_pecas:
-            if not all([cliente_selecionado, endereco, servico_realizado]):
+            if not all([cliente_selecionado, endereco, elevador, servico_realizado]):
                 st.error("Preencha todos os campos obrigatórios da CVT (*) antes de pedir peças")
             else:
                 st.session_state.mostrar_pecas = True
                 st.session_state.dados_cvt_temp = {
                     "cliente": cliente_selecionado,
                     "endereco": endereco,
+                    "elevador": elevador,
                     "servico_realizado": servico_realizado,
                     "obs": observacoes
                 }
                 st.rerun()
         
         if salvar_sem_pecas:
-            if not all([cliente_selecionado, endereco, servico_realizado]):
+            if not all([cliente_selecionado, endereco, elevador, servico_realizado]):
                 st.error("Preencha todos os campos obrigatórios (*)")
             else:
                 cvt_data = {
                     "tecnico": st.session_state["user_nome"],
                     "cliente": cliente_selecionado,
                     "endereco": endereco,
+                    "elevador": elevador,
                     "servico_realizado": servico_realizado,
                     "obs": observacoes,
                     "pecas_requeridas": ""
@@ -708,6 +717,7 @@ def cvt_form():
         with col_res1:
             st.write(f"**Cliente:** {dados_temp['cliente']}")
             st.write(f"**Endereço:** {dados_temp['endereco']}")
+            st.write(f"**Elevador:** {dados_temp['elevador']}")
         with col_res2:
             st.write(f"**Serviço:** {dados_temp['servico_realizado'][:100]}...")
             if dados_temp['obs']:
@@ -729,6 +739,7 @@ def cvt_form():
                         "tecnico": st.session_state["user_nome"],
                         "cliente": dados_temp['cliente'],
                         "endereco": dados_temp['endereco'],
+                        "elevador": dados_temp['elevador'],
                         "servico_realizado": dados_temp['servico_realizado'],
                         "obs": dados_temp['obs'],
                         "pecas_requeridas": ", ".join([f"{p['codigo']} ({p['quantidade']})" for p in st.session_state.pecas_adicionadas])
