@@ -934,7 +934,7 @@ def cvt_form():
             cvt_df = read_all_cvt()
             user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
             
-             if not user_cvts.empty:
+        if not user_cvts.empty:
         display_cols = ["numero_cvt", "cliente", "endereco", "elevador", "created_at", "status_cvt"]
         display_df = user_cvts[display_cols].copy()
         display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
