@@ -899,52 +899,15 @@ def cvt_form():
         st.success(f"CVT {numero_cvt} processada com sucesso!")
 
         # --- BOTÃO PARA BAIXAR PDF ---
-    st.markdown("---")
-    st.subheader("📄 Gerar PDF da CVT")
-
-    if not cvt_salva.empty:
-        dados_cvt = cvt_salva.iloc[0].to_dict()
-        
-        # Busca as peças relacionadas a esta CVT
-        req_df = read_all_requisicoes()
-        pecas_cvt = req_df[req_df['numero_cvt'] == numero_cvt]
-        pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
-        
-        # Gera o PDF
-        pdf = gerar_pdf_cvt(dados_cvt, pecas_lista)
-        
-        # Botão de download
-        nome_arquivo = f"CVT_{numero_cvt}.pdf"
-        criar_botao_download_pdf(pdf, nome_arquivo)
-        
-        col_pos1, col_pos2 = st.columns(2)
-        with col_pos1:
-            if st.button(" Nova CVT"):
-                # Limpa tudo
-                for key in ['cvt_salva', 'numero_cvt_salva', 'mostrar_pecas', 'pecas_adicionadas', 'dados_cvt_temp']:
-                    if key in st.session_state:
-                        del st.session_state[key]
-                st.rerun()
-        with col_pos2:
-            if st.button(" Ver Minhas CVTs"):
-                st.session_state.mostrar_minhas_cvts = True
-        
-     # Se a CVT foi salva, mostra opções pós-salvamento
-    # Se a CVT foi salva, mostra opções pós-salvamento
-    if st.session_state.get('cvt_salva', False):
-        numero_cvt = st.session_state.get('numero_cvt_salva')
-        st.success(f"CVT {numero_cvt} processada com sucesso!")
-
-        # --- BOTÃO PARA BAIXAR PDF ---
         st.markdown("---")
         st.subheader("📄 Gerar PDF da CVT")
 
         # Busca os dados da CVT salva
         cvt_df = read_all_cvt()
-        cvt_salva = cvt_df[cvt_df['numero_cvt'] == numero_cvt]
+        cvt_salva_df = cvt_df[cvt_df['numero_cvt'] == numero_cvt]  # Renomeei para evitar conflito
         
-        if not cvt_salva.empty:
-            dados_cvt = cvt_salva.iloc[0].to_dict()
+        if not cvt_salva_df.empty:
+            dados_cvt = cvt_salva_df.iloc[0].to_dict()
             
             # Busca as peças relacionadas a esta CVT
             req_df = read_all_requisicoes()
@@ -969,7 +932,7 @@ def cvt_form():
             with col_pos2:
                 if st.button("📋 Ver Minhas CVTs"):
                     st.session_state.mostrar_minhas_cvts = True
-                    st.rerrun()
+                    st.rerun()
 
     # Seção para visualizar CVTs anteriores - FORA DO BLOCO ANTERIOR
     if st.session_state.get('mostrar_minhas_cvts', False):
