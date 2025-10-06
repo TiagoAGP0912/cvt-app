@@ -930,9 +930,9 @@ def cvt_form():
                 st.session_state.mostrar_minhas_cvts = True
         
        if st.session_state.get('mostrar_minhas_cvts', False):
-    st.subheader("📋 Minhas CVTs Recentes")
-    cvt_df = read_all_cvt()
-    user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
+        st.subheader("📋 Minhas CVTs Recentes")
+        cvt_df = read_all_cvt()
+        user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
     
     if not user_cvts.empty:
         display_cols = ["numero_cvt", "cliente", "endereco", "elevador", "created_at", "status_cvt"]
