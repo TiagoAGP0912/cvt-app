@@ -45,6 +45,112 @@ PECAS_COLUMNS = [
     "codigo", "descricao", "categoria", "campos_especificos", "ativo"
 ]
 
+# --- FUNÇÃO PARA GERAR PDF ---
+def gerar_pdf_cvt(dados_cvt, pecas=None):
+    """Gera um PDF da CVT com todas as informações"""
+    
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Configurações
+    pdf.set_font("Arial", size=12)
+    
+    # Cabeçalho
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, txt="COMPROVANTE DE VISITA TÉCNICA", ln=1, align='C')
+    pdf.ln(10)
+    
+    # Informações da CVT
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="INFORMAÇÕES DA VISITA", ln=1)
+    pdf.set_font("Arial", size=11)
+    
+    # Dados básicos
+    pdf.cell(100, 8, txt=f"Número CVT: {dados_cvt['numero_cvt']}", ln=1)
+    
+    # Formata data
+    if 'created_at' in dados_cvt:
+        try:
+            data_obj = pd.to_datetime(dados_cvt['created_at'])
+            data_formatada = data_obj.strftime("%d/%m/%Y %H:%M")
+            pdf.cell(100, 8, txt=f"Data/Hora: {data_formatada}", ln=1)
+        except:
+            pdf.cell(100, 8, txt=f"Data/Hora: {dados_cvt['created_at']}", ln=1)
+    
+    pdf.cell(100, 8, txt=f"Técnico: {dados_cvt['tecnico']}", ln=1)
+    pdf.cell(100, 8, txt=f"Cliente: {dados_cvt['cliente']}", ln=1)
+    pdf.cell(100, 8, txt=f"Endereço: {dados_cvt['endereco']}", ln=1)
+    pdf.cell(100, 8, txt=f"Elevador: {dados_cvt.get('elevador', 'Não informado')}", ln=1)
+    pdf.ln(5)
+    
+    # Serviço Realizado
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="SERVIÇO REALIZADO / DIAGNÓSTICO", ln=1)
+    pdf.set_font("Arial", size=11)
+    
+    # Quebra o texto do serviço em múltiplas linhas
+    servico = dados_cvt['servico_realizado']
+    pdf.multi_cell(0, 8, txt=servico)
+    pdf.ln(5)
+    
+    # Observações (se houver)
+    if dados_cvt.get('obs'):
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 10, txt="OBSERVAÇÕES ADICIONAIS", ln=1)
+        pdf.set_font("Arial", size=11)
+        pdf.multi_cell(0, 8, txt=dados_cvt['obs'])
+        pdf.ln(5)
+    
+    # Seção de Peças (se houver)
+    if pecas and len(pecas) > 0:
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
+        pdf.set_font("Arial", size=10)
+        
+        # Cabeçalho da tabela
+        pdf.set_fill_color(200, 200, 200)
+        pdf.cell(30, 8, "Código", 1, 0, 'C', True)
+        pdf.cell(80, 8, "Descrição", 1, 0, 'C', True)
+        pdf.cell(20, 8, "Qtd", 1, 0, 'C', True)
+        pdf.cell(30, 8, "Prioridade", 1, 0, 'C', True)
+        pdf.cell(30, 8, "Observações", 1, 1, 'C', True)
+        
+        # Dados das peças
+        pdf.set_font("Arial", size=9)
+        for peca in pecas:
+            # Quebra linha se a descrição for muito longa
+            descricao = peca['peca_descricao']
+            if len(descricao) > 50:
+                descricao = descricao[:47] + "..."
+            
+            pdf.cell(30, 8, peca['peca_codigo'], 1)
+            pdf.cell(80, 8, descricao, 1)
+            pdf.cell(20, 8, str(peca['quantidade']), 1, 0, 'C')
+            pdf.cell(30, 8, peca['prioridade'], 1, 0, 'C')
+            
+            # Trunca observações muito longas
+            obs = peca.get('observacoes', '')
+            if len(obs) > 20:
+                obs = obs[:17] + "..."
+            pdf.cell(30, 8, obs, 1, 1)
+        
+        pdf.ln(5)
+    
+    # Rodapé
+    pdf.ln(10)
+    pdf.set_font("Arial", 'I', 10)
+    pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
+    
+    return pdf
+
+def criar_botao_download_pdf(pdf, nome_arquivo):
+    """Cria um botão de download para o PDF"""
+    pdf_output = pdf.output(dest='S').encode('latin-1')
+    b64_pdf = base64.b64encode(pdf_output).decode()
+    
+    href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{nome_arquivo}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; font-weight: bold;">📄 Baixar PDF da CVT</a>'
+    st.markdown(href, unsafe_allow_html=True)
+
 # --- Inicialização do Google Sheets ---
 def init_gsheets():
     """
@@ -332,102 +438,7 @@ def append_cvt(data):
         return numero_cvt
     
     return None
-# --- FUNÇÃO PARA GERAR PDF DA CVT ---
-def gerar_pdf_cvt(dados_cvt, pecas=None):
-    """Gera um PDF da CVT com todas as informações"""
-    
-    pdf = FPDF()
-    pdf.add_page()
-    
-    # Configurações
-    pdf.set_font("Arial", size=12)
-    
-    # Cabeçalho
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, txt="COMPROVANTE DE VISITA TÉCNICA", ln=1, align='C')
-    pdf.ln(10)
-    
-    # Informações da CVT
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 10, txt="INFORMAÇÕES DA VISITA", ln=1)
-    pdf.set_font("Arial", size=11)
-    
-    # Dados básicos
-    pdf.cell(100, 8, txt=f"Número CVT: {dados_cvt['numero_cvt']}", ln=1)
-    pdf.cell(100, 8, txt=f"Data/Hora: {dados_cvt['created_at']}", ln=1)
-    pdf.cell(100, 8, txt=f"Técnico: {dados_cvt['tecnico']}", ln=1)
-    pdf.cell(100, 8, txt=f"Cliente: {dados_cvt['cliente']}", ln=1)
-    pdf.cell(100, 8, txt=f"Endereço: {dados_cvt['endereco']}", ln=1)
-    pdf.cell(100, 8, txt=f"Elevador: {dados_cvt.get('elevador', 'Não informado')}", ln=1)
-    pdf.ln(5)
-    
-    # Serviço Realizado
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 10, txt="SERVIÇO REALIZADO / DIAGNÓSTICO", ln=1)
-    pdf.set_font("Arial", size=11)
-    
-    # Quebra o texto do serviço em múltiplas linhas
-    servico = dados_cvt['servico_realizado']
-    pdf.multi_cell(0, 8, txt=servico)
-    pdf.ln(5)
-    
-    # Observações (se houver)
-    if dados_cvt.get('obs'):
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt="OBSERVAÇÕES ADICIONAIS", ln=1)
-        pdf.set_font("Arial", size=11)
-        pdf.multi_cell(0, 8, txt=dados_cvt['obs'])
-        pdf.ln(5)
-    
-    # Seção de Peças (se houver)
-    if pecas and len(pecas) > 0:
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
-        pdf.set_font("Arial", size=10)
-        
-        # Cabeçalho da tabela
-        pdf.set_fill_color(200, 200, 200)
-        pdf.cell(30, 8, "Código", 1, 0, 'C', True)
-        pdf.cell(80, 8, "Descrição", 1, 0, 'C', True)
-        pdf.cell(20, 8, "Qtd", 1, 0, 'C', True)
-        pdf.cell(30, 8, "Prioridade", 1, 0, 'C', True)
-        pdf.cell(30, 8, "Observações", 1, 1, 'C', True)
-        
-        # Dados das peças
-        pdf.set_font("Arial", size=9)
-        for peca in pecas:
-            # Quebra linha se a descrição for muito longa
-            descricao = peca['peca_descricao']
-            if len(descricao) > 50:
-                descricao = descricao[:47] + "..."
-            
-            pdf.cell(30, 8, peca['peca_codigo'], 1)
-            pdf.cell(80, 8, descricao, 1)
-            pdf.cell(20, 8, str(peca['quantidade']), 1, 0, 'C')
-            pdf.cell(30, 8, peca['prioridade'], 1, 0, 'C')
-            
-            # Trunca observações muito longas
-            obs = peca.get('observacoes', '')
-            if len(obs) > 20:
-                obs = obs[:17] + "..."
-            pdf.cell(30, 8, obs, 1, 1)
-        
-        pdf.ln(5)
-    
-# Rodapé
-pdf.ln(10)
-pdf.set_font("Arial", 'I', 10)
-pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
-    
- return pdf
 
-def criar_botao_download_pdf(pdf, nome_arquivo):
-    """Cria um botão de download para o PDF"""
-    pdf_output = pdf.output(dest='S').encode('latin-1')
-    b64_pdf = base64.b64encode(pdf_output).decode()
-    
-    href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{nome_arquivo}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; font-weight: bold;">📄 Baixar PDF da CVT</a>'
-    st.markdown(href, unsafe_allow_html=True)
 
 
 def read_all_cvt():
@@ -883,19 +894,14 @@ def cvt_form():
                 st.rerun()
 
     # Se a CVT foi salva, mostra opções pós-salvamento
-    # Na parte final da função cvt_form(), onde mostra "CVT processada com sucesso":
-if st.session_state.get('cvt_salva', False):
-    numero_cvt = st.session_state.get('numero_cvt_salva')
-    st.success(f"CVT {numero_cvt} processada com sucesso!")
-    
-    # --- BOTÃO PARA BAIXAR PDF ---
+    if st.session_state.get('cvt_salva', False):
+        numero_cvt = st.session_state.get('numero_cvt_salva')
+        st.success(f"CVT {numero_cvt} processada com sucesso!")
+
+        # --- BOTÃO PARA BAIXAR PDF ---
     st.markdown("---")
     st.subheader("📄 Gerar PDF da CVT")
-    
-    # Busca os dados completos da CVT
-    cvt_df = read_all_cvt()
-    cvt_salva = cvt_df[cvt_df['numero_cvt'] == numero_cvt]
-    
+
     if not cvt_salva.empty:
         dados_cvt = cvt_salva.iloc[0].to_dict()
         
@@ -910,30 +916,61 @@ if st.session_state.get('cvt_salva', False):
         # Botão de download
         nome_arquivo = f"CVT_{numero_cvt}.pdf"
         criar_botao_download_pdf(pdf, nome_arquivo)
-    
-    # Opções pós-salvamento (já existentes)
-    col_pos1, col_pos2 = st.columns(2)
-    with col_pos1:
-        if st.button("📝 Nova CVT"):
-            # Limpa tudo
-            for key in ['cvt_salva', 'numero_cvt_salva', 'mostrar_pecas', 'pecas_adicionadas', 'dados_cvt_temp']:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
-    with col_pos2:
-        if st.button("📋 Ver Minhas CVTs"):
-            st.session_state.mostrar_minhas_cvts = True
+        
+        col_pos1, col_pos2 = st.columns(2)
+        with col_pos1:
+            if st.button(" Nova CVT"):
+                # Limpa tudo
+                for key in ['cvt_salva', 'numero_cvt_salva', 'mostrar_pecas', 'pecas_adicionadas', 'dados_cvt_temp']:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                st.rerun()
+        with col_pos2:
+            if st.button(" Ver Minhas CVTs"):
+                st.session_state.mostrar_minhas_cvts = True
         
         if st.session_state.get('mostrar_minhas_cvts', False):
             st.subheader(" Minhas CVTs Recentes")
             cvt_df = read_all_cvt()
             user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
             
-            if not user_cvts.empty:
-                display_cols = ["numero_cvt", "cliente", "endereco", "created_at", "status_cvt"]
-                display_df = user_cvts[display_cols].copy()
-                display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
-                st.dataframe(display_df.sort_values("created_at", ascending=False).head(10), use_container_width=True)
+             if not user_cvts.empty:
+        display_cols = ["numero_cvt", "cliente", "endereco", "elevador", "created_at", "status_cvt"]
+        display_df = user_cvts[display_cols].copy()
+        display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
+        # Mostra a tabela
+        st.dataframe(display_df.sort_values("created_at", ascending=False).head(10), use_container_width=True)
+        
+        # Adiciona opção de baixar PDF para cada CVT
+        st.subheader("📄 Baixar PDF de CVTs Anteriores")
+        
+        cvts_para_download = display_df.head(5)  # Mostra apenas as 5 mais recentes
+        
+        for _, cvt_row in cvts_para_download.iterrows():
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"**{cvt_row['numero_cvt']}** - {cvt_row['cliente']} ({cvt_row['created_at']})")
+            with col2:
+                if st.button(f"📄 PDF", key=f"pdf_{cvt_row['numero_cvt']}"):
+                    # Busca dados completos
+                    cvt_completa = cvt_df[cvt_df['numero_cvt'] == cvt_row['numero_cvt']].iloc[0].to_dict()
+                    
+                    # Busca peças
+                    req_df = read_all_requisicoes()
+                    pecas_cvt = req_df[req_df['numero_cvt'] == cvt_row['numero_cvt']]
+                    pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+                    
+                    # Gera e faz download do PDF
+                    pdf = gerar_pdf_cvt(cvt_completa, pecas_lista)
+                    pdf_output = pdf.output(dest='S').encode('latin-1')
+                    
+                    st.download_button(
+                        label="Baixar PDF",
+                        data=pdf_output,
+                        file_name=f"CVT_{cvt_row['numero_cvt']}.pdf",
+                        mime="application/pdf",
+                        key=f"download_{cvt_row['numero_cvt']}"
+                    )
             else:
                 st.info("Nenhuma CVT encontrada.")
 
