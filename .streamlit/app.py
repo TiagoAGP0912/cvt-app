@@ -45,9 +45,9 @@ PECAS_COLUMNS = [
     "codigo", "descricao", "categoria", "campos_especificos", "ativo"
 ]
 
-# --- FUNÇÃO PARA GERAR PDF (VERSÃO COM MELHOR ALINHAMENTO) ---
+# --- FUNÇÃO PARA GERAR PDF ---
 def gerar_pdf_cvt(dados_cvt, pecas=None):
-    """Gera um PDF da CVT com todas as informações - Versão com melhor alinhamento"""
+    """Gera um PDF da CVT com todas as informações"""
     
     pdf = FPDF()
     pdf.add_page()
@@ -105,51 +105,46 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     if pecas and len(pecas) > 0:
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
+        pdf.set_font("Arial", size=9)  # Fonte menor para caber tudo
         
-        # Layout organizado para peças
-        pdf.set_font("Arial", size=10)
+        # Cabeçalho da tabela - LARGURAS AJUSTADAS
+        pdf.set_fill_color(200, 200, 200)
+        pdf.cell(25, 8, "Código", 1, 0, 'C', True)           # 25mm
+        pdf.cell(70, 8, "Descrição", 1, 0, 'C', True)        # 70mm  
+        pdf.cell(15, 8, "Qtd", 1, 0, 'C', True)              # 15mm
+        pdf.cell(25, 8, "Prioridade", 1, 0, 'C', True)       # 25mm
+        pdf.cell(65, 8, "Observações", 1, 1, 'C', True)      # 65mm
+        # TOTAL: 25 + 70 + 15 + 25 + 65 = 200mm (cabe na página)
         
-        for i, peca in enumerate(pecas, 1):
-            # Cabeçalho da peça
-            pdf.set_fill_color(220, 220, 220)
-            pdf.cell(0, 8, f"PEÇA {i}", 1, 1, 'C', True)
+        # Dados das peças
+        for peca in pecas:
+            # Código
+            codigo = str(peca.get('peca_codigo', ''))
+            if len(codigo) > 10:
+                codigo = codigo[:8] + "..."
+            pdf.cell(25, 8, codigo, 1, 0, 'C')
             
-            # Linha 1: Código
-            pdf.set_font('Arial', 'B', 9)
-            pdf.cell(25, 6, "Código:", 0, 0)
-            pdf.set_font('Arial', '', 9)
-            pdf.cell(0, 6, str(peca.get('peca_codigo', 'N/A')), 0, 1)
+            # Descrição
+            descricao = str(peca.get('peca_descricao', ''))
+            if len(descricao) > 60:
+                descricao = descricao[:58] + "..."
+            pdf.cell(70, 8, descricao, 1, 0, 'L')
             
-            # Linha 2: Descrição (com quebra de linha)
-            pdf.set_font('Arial', 'B', 9)
-            pdf.cell(25, 6, "Descrição:", 0, 0)
-            pdf.set_font('Arial', '', 9)
-            descricao = peca.get('peca_descricao', 'N/A')
-            # Posição X atual para alinhamento
-            x_desc = pdf.get_x()
-            y_desc = pdf.get_y()
-            pdf.multi_cell(0, 6, txt=str(descricao))
+            # Quantidade
+            quantidade = str(peca.get('quantidade', ''))
+            pdf.cell(15, 8, quantidade, 1, 0, 'C')
             
-            # Linha 3: Quantidade e Prioridade (na mesma linha)
-            pdf.set_font('Arial', 'B', 9)
-            pdf.cell(25, 6, "Quantidade:", 0, 0)
-            pdf.set_font('Arial', '', 9)
-            pdf.cell(20, 6, str(peca.get('quantidade', 'N/A')), 0, 0)
+            # Prioridade
+            prioridade = str(peca.get('prioridade', ''))
+            if len(prioridade) > 10:
+                prioridade = prioridade[:8] + "..."
+            pdf.cell(25, 8, prioridade, 1, 0, 'C')
             
-            pdf.set_font('Arial', 'B', 9)
-            pdf.cell(25, 6, "Prioridade:", 0, 0)
-            pdf.set_font('Arial', '', 9)
-            pdf.cell(0, 6, str(peca.get('prioridade', 'N/A')), 0, 1)
-            
-            # Linha 4: Observações (se houver)
-            obs = peca.get('observacoes', '')
-            if obs and str(obs).strip():
-                pdf.set_font('Arial', 'B', 9)
-                pdf.cell(25, 6, "Observações:", 0, 0)
-                pdf.set_font('Arial', '', 9)
-                pdf.multi_cell(0, 6, txt=str(obs))
-            
-            pdf.ln(3)  # Espaço entre peças
+            # Observações
+            observacoes = str(peca.get('observacoes', ''))
+            if len(observacoes) > 40:
+                observacoes = observacoes[:38] + "..."
+            pdf.cell(65, 8, observacoes, 1, 1, 'L')
         
         pdf.ln(5)
     
@@ -159,6 +154,7 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
     
     return pdf
+    
 def criar_botao_download_pdf(pdf, nome_arquivo):
     """Cria um botão de download para o PDF"""
     try:
