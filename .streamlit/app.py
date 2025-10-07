@@ -46,7 +46,6 @@ PECAS_COLUMNS = [
 ]
 
 # --- FUNÇÃO PARA GERAR PDF ---
-# --- FUNÇÃO PARA GERAR PDF ---
 def gerar_pdf_cvt(dados_cvt, pecas=None):
     """Gera um PDF da CVT com todas as informações"""
     
@@ -474,8 +473,6 @@ def append_cvt(data):
     
     return None
 
-
-
 def read_all_cvt():
     """Lê todas as CVTs"""
     client_info = get_client_and_worksheets()
@@ -748,7 +745,6 @@ def seccion_pecas_cvt():
                 if st.button("🗑️", key=f"del_{i}"):
                     st.session_state.pecas_adicionadas.pop(i)
                     st.rerun()
-
 
 # --- Componentes da Interface ---
 def cvt_form():
@@ -1370,7 +1366,15 @@ def main():
         login_form()
         
         # Footer informativo
-        
+        st.markdown("---")
+        st.markdown(
+            """
+            <div style='text-align: center; color: gray;'>
+            <small>Sistema CVT - Desenvolvido para gestão de visitas técnicas</small>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     else:
         main_interface()
 
