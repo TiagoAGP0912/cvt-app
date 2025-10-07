@@ -1086,10 +1086,11 @@ def supervisor_panel():
     
     st.header("Painel de Gerenciamento")
     
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📦 Todas as Requisições", 
         "📊 Estatísticas", 
-        "👥 CVTs"
+        "👥 CVTs",
+        "📄 Gerar PDFs"
     ])
     
     with tab1:
@@ -1154,9 +1155,146 @@ def supervisor_panel():
         
         cvt_df = read_all_cvt()
         if not cvt_df.empty:
-            st.dataframe(cvt_df.sort_values("created_at", ascending=False), use_container_width=True)
+            # Filtros para CVTs
+            col1, col2 = st.columns(2)
+            with col1:
+                tecnico_cvt_filter = st.selectbox(
+                    "Filtrar por Técnico", 
+                    ["Todos"] + sorted(cvt_df["tecnico"].unique()),
+                    key="tecnico_cvt_filter"
+                )
+            with col2:
+                status_cvt_filter = st.selectbox(
+                    "Filtrar por Status",
+                    ["Todos"] + sorted(cvt_df["status_cvt"].unique()),
+                    key="status_cvt_filter"
+                )
+            
+            # Aplicar filtros
+            filtered_cvts = cvt_df.copy()
+            if tecnico_cvt_filter != "Todos":
+                filtered_cvts = filtered_cvts[filtered_cvts["tecnico"] == tecnico_cvt_filter]
+            if status_cvt_filter != "Todos":
+                filtered_cvts = filtered_cvts[filtered_cvts["status_cvt"] == status_cvt_filter]
+            
+            st.write(f"**CVTs encontradas:** {len(filtered_cvts)}")
+            
+            # Formatar datas para exibição
+            display_cvts = filtered_cvts.copy()
+            try:
+                display_cvts["created_at"] = pd.to_datetime(display_cvts["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
+            except:
+                display_cvts["created_at"] = display_cvts["created_at"].astype(str)
+            
+            # Mostrar tabela com colunas selecionadas
+            cols_to_show = ["numero_cvt", "tecnico", "cliente", "created_at", "status_cvt"]
+            st.dataframe(display_cvts[cols_to_show].sort_values("created_at", ascending=False), use_container_width=True)
         else:
             st.info("Nenhuma CVT encontrada.")
+    
+    with tab4:
+        st.subheader("📄 Gerar PDF de CVTs")
+        
+        cvt_df = read_all_cvt()
+        if not cvt_df.empty:
+            # Filtros para busca de CVTs
+            col1, col2 = st.columns(2)
+            with col1:
+                tecnico_pdf_filter = st.selectbox(
+                    "Filtrar por Técnico", 
+                    ["Todos"] + sorted(cvt_df["tecnico"].unique()),
+                    key="tecnico_pdf_filter"
+                )
+            with col2:
+                # Campo de busca por número da CVT
+                numero_cvt_busca = st.text_input("Buscar por Número da CVT", placeholder="Ex: CVT-20251006-232324")
+            
+            # Aplicar filtros
+            cvts_filtradas = cvt_df.copy()
+            if tecnico_pdf_filter != "Todos":
+                cvts_filtradas = cvts_filtradas[cvts_filtradas["tecnico"] == tecnico_pdf_filter]
+            if numero_cvt_busca:
+                cvts_filtradas = cvts_filtradas[cvts_filtradas["numero_cvt"].str.contains(numero_cvt_busca, case=False, na=False)]
+            
+            if not cvts_filtradas.empty:
+                # Seleção da CVT para gerar PDF
+                st.subheader("Selecionar CVT para Gerar PDF")
+                
+                # Criar opções para selectbox
+                cvts_options = cvts_filtradas.apply(
+                    lambda x: f"{x['numero_cvt']} - {x['cliente']} ({x['tecnico']}) - {x['created_at']}", 
+                    axis=1
+                ).tolist()
+                
+                cvt_selecionada_str = st.selectbox(
+                    "Selecione uma CVT:",
+                    options=cvts_options,
+                    key="select_cvt_supervisor"
+                )
+                
+                if cvt_selecionada_str:
+                    # Extrair o número da CVT da string selecionada
+                    numero_cvt_selecionada = cvt_selecionada_str.split(" - ")[0]
+                    
+                    # Buscar dados completos da CVT selecionada
+                    cvt_completa_df = cvt_df[cvt_df['numero_cvt'] == numero_cvt_selecionada]
+                    
+                    if not cvt_completa_df.empty:
+                        cvt_completa = cvt_completa_df.iloc[0].to_dict()
+                        
+                        # Buscar peças relacionadas
+                        req_df = read_all_requisicoes()
+                        pecas_cvt = req_df[req_df['numero_cvt'] == numero_cvt_selecionada]
+                        pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+                        
+                        # Gerar preview dos dados
+                        st.subheader("Pré-visualização dos Dados")
+                        col_preview1, col_preview2 = st.columns(2)
+                        with col_preview1:
+                            st.write(f"**Número CVT:** {cvt_completa.get('numero_cvt', 'N/A')}")
+                            st.write(f"**Técnico:** {cvt_completa.get('tecnico', 'N/A')}")
+                            st.write(f"**Cliente:** {cvt_completa.get('cliente', 'N/A')}")
+                            st.write(f"**Data:** {cvt_completa.get('created_at', 'N/A')}")
+                        with col_preview2:
+                            st.write(f"**Endereço:** {cvt_completa.get('endereco', 'N/A')}")
+                            st.write(f"**Elevador:** {cvt_completa.get('elevador', 'N/A')}")
+                            st.write(f"**Status:** {cvt_completa.get('status_cvt', 'N/A')}")
+                            st.write(f"**Peças:** {len(pecas_lista) if pecas_lista else 0}")
+                        
+                        # Botão para gerar e baixar PDF
+                        st.markdown("---")
+                        st.subheader("Gerar PDF")
+                        
+                        # Gerar o PDF
+                        pdf = gerar_pdf_cvt(cvt_completa, pecas_lista)
+                        
+                        # Botão de download
+                        nome_arquivo = f"CVT_{numero_cvt_selecionada}.pdf"
+                        criar_botao_download_pdf(pdf, nome_arquivo)
+                        
+                    else:
+                        st.error("CVT selecionada não encontrada nos dados completos.")
+                else:
+                    st.info("Selecione uma CVT da lista para gerar o PDF.")
+            
+            else:
+                st.info("Nenhuma CVT encontrada com os filtros aplicados.")
+                
+            # Mostrar estatísticas rápidas
+            st.markdown("---")
+            st.subheader("📊 Estatísticas das CVTs")
+            col_stat1, col_stat2, col_stat3 = st.columns(3)
+            with col_stat1:
+                st.metric("Total de CVTs", len(cvt_df))
+            with col_stat2:
+                cvts_por_tecnico = cvt_df["tecnico"].nunique()
+                st.metric("Técnicos com CVTs", cvts_por_tecnico)
+            with col_stat3:
+                cvts_com_pecas = len(cvt_df[cvt_df["pecas_requeridas"] != ""])
+                st.metric("CVTs com Peças", cvts_com_pecas)
+                
+        else:
+            st.info("Nenhuma CVT encontrada no sistema.")
 
 # --- Interface Principal ---
 def main_interface():
