@@ -129,7 +129,7 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
             pdf.set_font('Arial', 'B', 9)
             pdf.cell(30, 6, "Quantidade:", 0, 0)
             pdf.set_font('Arial', '', 9)
-            pdf.cell(30, 6, str(peca.get('quantidade', '')), 0, 0)
+            pdf.cell(0, 6, str(peca.get('quantidade', '')), 0, 0)
             
             pdf.set_font('Arial', 'B', 9)
             pdf.cell(30, 6, "Prioridade:", 0, 0)
