@@ -117,40 +117,40 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
             pdf.cell(col_widths[i], 8, h, 1, 0, 'C', True)
         pdf.ln()
 
-      # Linhas da tabela
-for peca in pecas:
-    linha_altura = 8
-    campos = [
-        str(peca.get('peca_codigo', '')),
-        str(peca.get('peca_descricao', '')),
-        str(peca.get('quantidade', '')),
-        str(peca.get('prioridade', '')),
-        str(peca.get('observacoes', ''))
-    ]
+    # Linhas da tabela
+    for peca in pecas:
+        linha_altura = 8
+        campos = [
+            str(peca.get('peca_codigo', '')),
+            str(peca.get('peca_descricao', '')),
+            str(peca.get('quantidade', '')),
+            str(peca.get('prioridade', '')),
+            str(peca.get('observacoes', ''))
+        ]
 
-    # Calcula altura máxima da linha (quantas linhas cada campo vai precisar)
-    alturas = []
-    for i, texto in enumerate(campos):
-        n_linhas = len(pdf.multi_cell(col_widths[i], linha_altura, texto, border=0, align='L', split_only=True))
-        alturas.append(n_linhas * linha_altura)
-    linha_max_altura = max(alturas)
+        # Calcula altura máxima da linha (quantas linhas cada campo vai precisar)
+        alturas = []
+        for i, texto in enumerate(campos):
+            n_linhas = len(pdf.multi_cell(col_widths[i], linha_altura, texto, border=0, align='L', split_only=True))
+            alturas.append(n_linhas * linha_altura)
+        linha_max_altura = max(alturas)
 
-    # Posição inicial da linha
-    y_inicial = pdf.get_y()
-    x_inicial = pdf.get_x()
+        # Posição inicial da linha
+        y_inicial = pdf.get_y()
+        x_inicial = pdf.get_x()
 
-    # Escreve cada célula com altura igual
-    for i, texto in enumerate(campos):
-        x_atual = x_inicial + sum(col_widths[:i])
-        pdf.set_xy(x_atual, y_inicial)
-        pdf.multi_cell(col_widths[i], linha_altura, texto, border=1, align='L', max_line_height=linha_altura)
-        
-        # Se a célula tiver menos linhas, completa a borda até a altura máxima
-        y_final = y_inicial + linha_max_altura
-        pdf.set_xy(x_atual + col_widths[i], y_inicial)
+        # Escreve cada célula com altura igual
+        for i, texto in enumerate(campos):
+            x_atual = x_inicial + sum(col_widths[:i])
+            pdf.set_xy(x_atual, y_inicial)
+            pdf.multi_cell(col_widths[i], linha_altura, texto, border=1, align='L', max_line_height=linha_altura)
+            
+            # Se a célula tiver menos linhas, completa a borda até a altura máxima
+            y_final = y_inicial + linha_max_altura
+            pdf.set_xy(x_atual + col_widths[i], y_inicial)
 
-    # Move o cursor pra próxima linha
-    pdf.set_y(y_inicial + linha_max_altura)
+        # Move o cursor pra próxima linha
+        pdf.set_y(y_inicial + linha_max_altura)
     pdf.ln(5)
 
     # Rodapé
@@ -159,6 +159,7 @@ for peca in pecas:
     pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
     
     return pdf
+
 
 
     
