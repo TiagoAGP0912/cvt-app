@@ -119,7 +119,7 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
 
     # Linhas da tabela
     for peca in pecas:
-        linha_altura = 12
+        linha_altura = 8
         campos = [
             str(peca.get('peca_codigo', '')),
             str(peca.get('peca_descricao', '')),
