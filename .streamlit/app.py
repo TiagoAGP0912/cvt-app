@@ -46,8 +46,9 @@ PECAS_COLUMNS = [
 ]
 
 # --- FUNÇÃO PARA GERAR PDF ---
+# --- FUNÇÃO PARA GERAR PDF (VERSÃO COM MELHOR ALINHAMENTO) ---
 def gerar_pdf_cvt(dados_cvt, pecas=None):
-    """Gera um PDF da CVT com todas as informações - Versão melhorada para textos longos"""
+    """Gera um PDF da CVT com todas as informações - Versão com melhor alinhamento"""
     
     pdf = FPDF()
     pdf.add_page()
@@ -106,45 +107,50 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
         
-        # Layout mais simples para peças - uma por linha com quebra automática
+        # Layout organizado para peças
         pdf.set_font("Arial", size=10)
         
         for i, peca in enumerate(pecas, 1):
-            pdf.set_fill_color(240, 240, 240)
-            pdf.cell(0, 8, f"Peça {i}", 1, 1, 'L', True)
+            # Cabeçalho da peça
+            pdf.set_fill_color(220, 220, 220)
+            pdf.cell(0, 8, f"PEÇA {i}", 1, 1, 'C', True)
             
-            # Código e Descrição
+            # Linha 1: Código
             pdf.set_font('Arial', 'B', 9)
-            pdf.cell(30, 6, "Código:", 0, 0)
+            pdf.cell(25, 6, "Código:", 0, 0)
             pdf.set_font('Arial', '', 9)
-            pdf.cell(0, 6, str(peca.get('peca_codigo', '')), 0, 1)
+            pdf.cell(0, 6, str(peca.get('peca_codigo', 'N/A')), 0, 1)
             
+            # Linha 2: Descrição (com quebra de linha)
             pdf.set_font('Arial', 'B', 9)
-            pdf.cell(30, 6, "Descrição:", 0, 0)
+            pdf.cell(25, 6, "Descrição:", 0, 0)
             pdf.set_font('Arial', '', 9)
-            descricao = peca.get('peca_descricao', '')
+            descricao = peca.get('peca_descricao', 'N/A')
+            # Posição X atual para alinhamento
+            x_desc = pdf.get_x()
+            y_desc = pdf.get_y()
             pdf.multi_cell(0, 6, txt=str(descricao))
             
-            # Quantidade e Prioridade na mesma linha
+            # Linha 3: Quantidade e Prioridade (na mesma linha)
             pdf.set_font('Arial', 'B', 9)
-            pdf.cell(30, 6, "Quantidade:", 0, 0)
+            pdf.cell(25, 6, "Quantidade:", 0, 0)
             pdf.set_font('Arial', '', 9)
-            pdf.cell(0, 6, str(peca.get('quantidade', '')), 0, 0)
+            pdf.cell(20, 6, str(peca.get('quantidade', 'N/A')), 0, 0)
             
             pdf.set_font('Arial', 'B', 9)
-            pdf.cell(30, 6, "Prioridade:", 0, 0)
+            pdf.cell(25, 6, "Prioridade:", 0, 0)
             pdf.set_font('Arial', '', 9)
-            pdf.cell(0, 6, str(peca.get('prioridade', '')), 0, 1)
+            pdf.cell(0, 6, str(peca.get('prioridade', 'N/A')), 0, 1)
             
-            # Observações
+            # Linha 4: Observações (se houver)
             obs = peca.get('observacoes', '')
-            if obs:
+            if obs and str(obs).strip():
                 pdf.set_font('Arial', 'B', 9)
-                pdf.cell(30, 6, "Observações:", 0, 0)
+                pdf.cell(25, 6, "Observações:", 0, 0)
                 pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 6, txt=str(obs))
             
-            pdf.ln(2)
+            pdf.ln(3)  # Espaço entre peças
         
         pdf.ln(5)
     
@@ -154,7 +160,6 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
     
     return pdf
-
 def criar_botao_download_pdf(pdf, nome_arquivo):
     """Cria um botão de download para o PDF"""
     try:
