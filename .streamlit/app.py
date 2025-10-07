@@ -102,7 +102,7 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
         pdf.ln(5)
     
     # Seção de Peças (se houver)
-   # Seção de Peças (se houver)
+# Seção de Peças (se houver)
 if pecas and len(pecas) > 0:
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
@@ -148,13 +148,6 @@ if pecas and len(pecas) > 0:
         pdf.set_y(y_inicial + linha_max_altura)
     pdf.ln(5)
 
-    
-    # Rodapé
-    pdf.ln(10)
-    pdf.set_font("Arial", 'I', 10)
-    pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
-    
-    return pdf
     
 def criar_botao_download_pdf(pdf, nome_arquivo):
     """Cria um botão de download para o PDF"""
