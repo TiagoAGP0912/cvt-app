@@ -47,7 +47,7 @@ PECAS_COLUMNS = [
 
 # --- FUNÇÃO PARA GERAR PDF ---
 def gerar_pdf_cvt(dados_cvt, pecas=None):
-    """Gera um PDF da CVT com todas as informações"""
+    """Gera um PDF da CVT com todas as informações - Versão melhorada para textos longos"""
     
     pdf = FPDF()
     pdf.add_page()
@@ -105,34 +105,46 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     if pecas and len(pecas) > 0:
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
+        
+        # Layout mais simples para peças - uma por linha com quebra automática
         pdf.set_font("Arial", size=10)
         
-        # Cabeçalho da tabela
-        pdf.set_fill_color(200, 200, 200)
-        pdf.cell(30, 8, "Código", 1, 0, 'C', True)
-        pdf.cell(80, 8, "Descrição", 1, 0, 'C', True)
-        pdf.cell(20, 8, "Qtd", 1, 0, 'C', True)
-        pdf.cell(30, 8, "Prioridade", 1, 0, 'C', True)
-        pdf.cell(30, 8, "Observações", 1, 1, 'C', True)
-        
-        # Dados das peças
-        pdf.set_font("Arial", size=9)
-        for peca in pecas:
-            # Quebra linha se a descrição for muito longa
+        for i, peca in enumerate(pecas, 1):
+            pdf.set_fill_color(240, 240, 240)
+            pdf.cell(0, 8, f"Peça {i}", 1, 1, 'L', True)
+            
+            # Código e Descrição
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(30, 6, "Código:", 0, 0)
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 6, str(peca.get('peca_codigo', '')), 0, 1)
+            
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(30, 6, "Descrição:", 0, 0)
+            pdf.set_font('Arial', '', 9)
             descricao = peca.get('peca_descricao', '')
-            if len(descricao) > 50:
-                descricao = descricao[:47] + "..."
+            pdf.multi_cell(0, 6, txt=str(descricao))
             
-            pdf.cell(30, 8, str(peca.get('peca_codigo', '')), 1)
-            pdf.cell(80, 8, str(descricao), 1)
-            pdf.cell(20, 8, str(peca.get('quantidade', '')), 1, 0, 'C')
-            pdf.cell(30, 8, str(peca.get('prioridade', '')), 1, 0, 'C')
+            # Quantidade e Prioridade na mesma linha
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(30, 6, "Quantidade:", 0, 0)
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(30, 6, str(peca.get('quantidade', '')), 0, 0)
             
-            # Trunca observações muito longas
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(30, 6, "Prioridade:", 0, 0)
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 6, str(peca.get('prioridade', '')), 0, 1)
+            
+            # Observações
             obs = peca.get('observacoes', '')
-            if len(obs) > 20:
-                obs = obs[:17] + "..."
-            pdf.cell(30, 8, str(obs), 1, 1)
+            if obs:
+                pdf.set_font('Arial', 'B', 9)
+                pdf.cell(30, 6, "Observações:", 0, 0)
+                pdf.set_font('Arial', '', 9)
+                pdf.multi_cell(0, 6, txt=str(obs))
+            
+            pdf.ln(2)
         
         pdf.ln(5)
     
