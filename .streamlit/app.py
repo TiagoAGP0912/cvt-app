@@ -158,7 +158,7 @@ for peca in pecas:
     pdf.set_font("Arial", 'I', 10)
     pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
     
-return pdf
+    return pdf
 
 
     
