@@ -101,7 +101,6 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
         pdf.multi_cell(0, 8, txt=str(dados_cvt.get('obs', '')))
         pdf.ln(5)
     
-    # Seção de Peças (se houver)
 # Seção de Peças (se houver)
 if pecas and len(pecas) > 0:
     pdf.set_font("Arial", 'B', 12)
@@ -147,6 +146,7 @@ if pecas and len(pecas) > 0:
 
         pdf.set_y(y_inicial + linha_max_altura)
     pdf.ln(5)
+
 
     
 def criar_botao_download_pdf(pdf, nome_arquivo):
