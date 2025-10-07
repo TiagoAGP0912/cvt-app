@@ -45,9 +45,9 @@ PECAS_COLUMNS = [
     "codigo", "descricao", "categoria", "campos_especificos", "ativo"
 ]
 
-# --- FUNÇÃO PARA GERAR PDF (VERSÃO COMPACTA) ---
+# --- FUNÇÃO PARA GERAR PDF (VERSÃO COM MELHOR ALINHAMENTO) ---
 def gerar_pdf_cvt(dados_cvt, pecas=None):
-    """Gera um PDF da CVT com todas as informações - Versão compacta"""
+    """Gera um PDF da CVT com todas as informações - Versão com melhor alinhamento"""
     
     pdf = FPDF()
     pdf.add_page()
@@ -60,53 +60,100 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     pdf.cell(200, 10, txt="COMPROVANTE DE VISITA TÉCNICA", ln=1, align='C')
     pdf.ln(10)
     
-    # Informações da CVT (mantido igual...)
-    # ... (código anterior das informações da CVT)
+    # Informações da CVT
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="INFORMAÇÕES DA VISITA", ln=1)
+    pdf.set_font("Arial", size=11)
     
-    # Seção de Peças (se houver) - VERSÃO COMPACTA
+    # Dados básicos
+    pdf.cell(100, 8, txt=f"Número CVT: {dados_cvt.get('numero_cvt', 'N/A')}", ln=1)
+    
+    # Formata data
+    if 'created_at' in dados_cvt:
+        try:
+            data_obj = pd.to_datetime(dados_cvt['created_at'])
+            data_formatada = data_obj.strftime("%d/%m/%Y %H:%M")
+            pdf.cell(100, 8, txt=f"Data/Hora: {data_formatada}", ln=1)
+        except:
+            pdf.cell(100, 8, txt=f"Data/Hora: {dados_cvt.get('created_at', 'N/A')}", ln=1)
+    
+    pdf.cell(100, 8, txt=f"Técnico: {dados_cvt.get('tecnico', 'N/A')}", ln=1)
+    pdf.cell(100, 8, txt=f"Cliente: {dados_cvt.get('cliente', 'N/A')}", ln=1)
+    pdf.cell(100, 8, txt=f"Endereço: {dados_cvt.get('endereco', 'N/A')}", ln=1)
+    pdf.cell(100, 8, txt=f"Elevador: {dados_cvt.get('elevador', 'Não informado')}", ln=1)
+    pdf.ln(5)
+    
+    # Serviço Realizado
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="SERVIÇO REALIZADO / DIAGNÓSTICO", ln=1)
+    pdf.set_font("Arial", size=11)
+    
+    # Quebra o texto do serviço em múltiplas linhas
+    servico = dados_cvt.get('servico_realizado', 'Não informado')
+    pdf.multi_cell(0, 8, txt=str(servico))
+    pdf.ln(5)
+    
+    # Observações (se houver)
+    if dados_cvt.get('obs'):
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 10, txt="OBSERVAÇÕES ADICIONAIS", ln=1)
+        pdf.set_font("Arial", size=11)
+        pdf.multi_cell(0, 8, txt=str(dados_cvt.get('obs', '')))
+        pdf.ln(5)
+    
+    # Seção de Peças (se houver)
     if pecas and len(pecas) > 0:
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
         
-        # Layout compacto em tabela simples
-        pdf.set_font("Arial", size=9)
+        # Layout organizado para peças
+        pdf.set_font("Arial", size=10)
         
         for i, peca in enumerate(pecas, 1):
             # Cabeçalho da peça
-            pdf.set_fill_color(240, 240, 240)
-            pdf.cell(0, 6, f"Peça {i}", 1, 1, 'L', True)
+            pdf.set_fill_color(220, 220, 220)
+            pdf.cell(0, 8, f"PEÇA {i}", 1, 1, 'C', True)
             
-            # Informações em formato de lista
-            info_lines = [
-                f"Código: {peca.get('peca_codigo', 'N/A')}",
-                f"Quantidade: {peca.get('quantidade', 'N/A')}",
-                f"Prioridade: {peca.get('prioridade', 'N/A')}"
-            ]
-            
-            for line in info_lines:
-                pdf.cell(5)  # Indentação
-                pdf.cell(0, 5, line, 0, 1)
-            
-            # Descrição (com indentação)
-            pdf.cell(5)  # Indentação
+            # Linha 1: Código
             pdf.set_font('Arial', 'B', 9)
-            pdf.cell(20, 5, "Descrição:", 0, 0)
+            pdf.cell(25, 6, "Código:", 0, 0)
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 6, str(peca.get('peca_codigo', 'N/A')), 0, 1)
+            
+            # Linha 2: Descrição (com quebra de linha)
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(25, 6, "Descrição:", 0, 0)
             pdf.set_font('Arial', '', 9)
             descricao = peca.get('peca_descricao', 'N/A')
-            pdf.multi_cell(0, 5, txt=str(descricao))
+            # Posição X atual para alinhamento
+            x_desc = pdf.get_x()
+            y_desc = pdf.get_y()
+            pdf.multi_cell(0, 6, txt=str(descricao))
             
-            # Observações (se houver)
+            # Linha 3: Quantidade e Prioridade (na mesma linha)
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(25, 6, "Quantidade:", 0, 0)
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(20, 6, str(peca.get('quantidade', 'N/A')), 0, 0)
+            
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(25, 6, "Prioridade:", 0, 0)
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 6, str(peca.get('prioridade', 'N/A')), 0, 1)
+            
+            # Linha 4: Observações (se houver)
             obs = peca.get('observacoes', '')
             if obs and str(obs).strip():
-                pdf.cell(5)  # Indentação
                 pdf.set_font('Arial', 'B', 9)
-                pdf.cell(25, 5, "Observações:", 0, 0)
+                pdf.cell(25, 6, "Observações:", 0, 0)
                 pdf.set_font('Arial', '', 9)
-                pdf.multi_cell(0, 5, txt=str(obs))
+                pdf.multi_cell(0, 6, txt=str(obs))
             
-            pdf.ln(2)  # Pequeno espaço entre peças
+            pdf.ln(3)  # Espaço entre peças
+        
+        pdf.ln(5)
     
-    # Rodapé (mantido igual)
+    # Rodapé
     pdf.ln(10)
     pdf.set_font("Arial", 'I', 10)
     pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
