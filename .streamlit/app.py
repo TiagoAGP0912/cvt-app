@@ -102,51 +102,52 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
         pdf.ln(5)
     
     # Seção de Peças (se houver)
-    if pecas and len(pecas) > 0:
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
-        pdf.set_font("Arial", size=9)  # Fonte menor para caber tudo
-        
-        # Cabeçalho da tabela - LARGURAS AJUSTADAS
-        pdf.set_fill_color(200, 200, 200)
-        pdf.cell(25, 8, "Código", 1, 0, 'C', True)           # 25mm
-        pdf.cell(70, 8, "Descrição", 1, 0, 'C', True)        # 70mm  
-        pdf.cell(15, 8, "Qtd", 1, 0, 'C', True)              # 15mm
-        pdf.cell(25, 8, "Prioridade", 1, 0, 'C', True)       # 25mm
-        pdf.cell(65, 8, "Observações", 1, 1, 'C', True)      # 65mm
-        # TOTAL: 25 + 70 + 15 + 25 + 65 = 200mm (cabe na página)
-        
-        # Dados das peças
-        for peca in pecas:
-            # Código
-            codigo = str(peca.get('peca_codigo', ''))
-            if len(codigo) > 10:
-                codigo = codigo[:8] + "..."
-            pdf.cell(25, 8, codigo, 1, 0, 'C')
-            
-            # Descrição
-            descricao = str(peca.get('peca_descricao', ''))
-            if len(descricao) > 60:
-                descricao = descricao[:58] + "..."
-            pdf.cell(70, 8, descricao, 1, 0, 'L')
-            
-            # Quantidade
-            quantidade = str(peca.get('quantidade', ''))
-            pdf.cell(15, 8, quantidade, 1, 0, 'C')
-            
-            # Prioridade
-            prioridade = str(peca.get('prioridade', ''))
-            if len(prioridade) > 10:
-                prioridade = prioridade[:8] + "..."
-            pdf.cell(25, 8, prioridade, 1, 0, 'C')
-            
-            # Observações
-            observacoes = str(peca.get('observacoes', ''))
-            if len(observacoes) > 40:
-                observacoes = observacoes[:38] + "..."
-            pdf.cell(65, 8, observacoes, 1, 1, 'L')
-        
-        pdf.ln(5)
+   # Seção de Peças (se houver)
+if pecas and len(pecas) > 0:
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
+    pdf.set_font("Arial", size=9)
+    
+    # Cabeçalho
+    pdf.set_fill_color(200, 200, 200)
+    col_widths = [25, 70, 15, 25, 65]
+    headers = ["Código", "Descrição", "Qtd", "Prioridade", "Observações"]
+    for i, h in enumerate(headers):
+        pdf.cell(col_widths[i], 8, h, 1, 0, 'C', True)
+    pdf.ln()
+
+    # Linhas
+    for peca in pecas:
+        y_inicial = pdf.get_y()
+        x_inicial = pdf.get_x()
+        linha_altura = 8
+
+        campos = [
+            str(peca.get('peca_codigo', '')),
+            str(peca.get('peca_descricao', '')),
+            str(peca.get('quantidade', '')),
+            str(peca.get('prioridade', '')),
+            str(peca.get('observacoes', ''))
+        ]
+
+        # Calcula altura máxima da linha (caso multi_cell quebre)
+        alturas = []
+        for i, texto in enumerate(campos):
+            n_linhas = len(pdf.multi_cell(col_widths[i], linha_altura, texto, border=0, align='L', split_only=True))
+            alturas.append(n_linhas * linha_altura)
+        linha_max_altura = max(alturas)
+
+        # Escreve célula a célula com controle de posição
+        for i, texto in enumerate(campos):
+            x = pdf.get_x()
+            y = y_inicial
+            pdf.set_xy(x, y)
+            pdf.multi_cell(col_widths[i], linha_altura, texto, border=1, align='L')
+            pdf.set_xy(x + col_widths[i], y)
+
+        pdf.set_y(y_inicial + linha_max_altura)
+    pdf.ln(5)
+
     
     # Rodapé
     pdf.ln(10)
