@@ -976,10 +976,16 @@ def cvt_form():
         if not cvt_salva_df.empty:
             dados_cvt = cvt_salva_df.iloc[0].to_dict()
             
-            # Busca as peças relacionadas a esta CVT
+            # CORREÇÃO: Verificar se a coluna existe antes de filtrar
             req_df = read_all_requisicoes()
-            pecas_cvt = req_df[req_df['numero_cvt'] == numero_cvt]
-            pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+            
+            # Verifica se a coluna 'numero_cvt' existe no DataFrame de requisições
+            if not req_df.empty and 'numero_cvt' in req_df.columns:
+                pecas_cvt = req_df[req_df['numero_cvt'] == numero_cvt]
+                pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+            else:
+                # Se não existe a coluna ou o DataFrame está vazio, não há peças
+                pecas_lista = None
             
             # Gera o PDF
             pdf = gerar_pdf_cvt(dados_cvt, pecas_lista)
@@ -1041,8 +1047,11 @@ def cvt_form():
                         
                         # Busca peças
                         req_df = read_all_requisicoes()
-                        pecas_cvt = req_df[req_df['numero_cvt'] == cvt_selecionada]
-                        pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+                        if not req_df.empty and 'numero_cvt' in req_df.columns:
+                            pecas_cvt = req_df[req_df['numero_cvt'] == cvt_selecionada]
+                            pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+                        else:
+                            pecas_lista = None
                         
                         # Gera o PDF
                         pdf = gerar_pdf_cvt(cvt_completa, pecas_lista)
@@ -1276,8 +1285,11 @@ def supervisor_panel():
                         
                         # Buscar peças relacionadas
                         req_df = read_all_requisicoes()
-                        pecas_cvt = req_df[req_df['numero_cvt'] == numero_cvt_selecionada]
-                        pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+                        if not req_df.empty and 'numero_cvt' in req_df.columns:
+                            pecas_cvt = req_df[req_df['numero_cvt'] == numero_cvt_selecionada]
+                            pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
+                        else:
+                            pecas_lista = None
                         
                         # Gerar preview dos dados
                         st.subheader("Pré-visualização dos Dados")
