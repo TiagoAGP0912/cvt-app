@@ -156,7 +156,7 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     # Rodapé
     pdf.ln(10)
     pdf.set_font("Arial", 'I', 10)
-    pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
+    pdf.cell(0, 10, txt="Documento somente para teste", ln=1, align='C')
     
     return pdf
 
