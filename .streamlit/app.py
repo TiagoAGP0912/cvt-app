@@ -1242,26 +1242,25 @@ def supervisor_panel():
             st.info("Nenhuma requisição encontrada para estatísticas.")
     
     with tab3:
-    st.subheader("CVTs dos Técnicos")
+        st.subheader("CVTs dos Técnicos")
     
-    # Adicionar um botão para debug apenas nesta tab
-    debug_mode = st.checkbox("🔍 Modo Debug", key="debug_cvt")
+        # Adicionar um botão para debug apenas nesta tab
+        debug_mode = st.checkbox("🔍 Modo Debug", key="debug_cvt")
     
-    cvt_df = read_all_cvt()
-    
-    if debug_mode:
-        st.write("### 🔍 DEBUG - Status da Leitura")
-        st.write(f"**Total de CVTs carregadas:** {len(cvt_df)}")
+        cvt_df = read_all_cvt()
         
-        if not cvt_df.empty:
-            st.write("**📋 Estrutura do DataFrame:**")
-            st.write(f"- Colunas: {list(cvt_df.columns)}")
-            st.write(f"- Shape: {cvt_df.shape}")
-            st.write(f"- Técnicos únicos: {cvt_df['tecnico'].unique()}")
-            st.write(f"- Status únicos: {cvt_df['status_cvt'].unique() if 'status_cvt' in cvt_df.columns else 'Coluna status_cvt não encontrada'}")
-            
-            st.write("**📊 Primeiras 5 CVTs:**")
-            st.dataframe(cvt_df.head(5))
+        if debug_mode:
+            st.write("### 🔍 DEBUG - Status da Leitura")
+            st.write(f"**Total de CVTs carregadas:** {len(cvt_df)}")
+        
+            if not cvt_df.empty:
+                st.write("**📋 Estrutura do DataFrame:**")
+                st.write(f"- Colunas: {list(cvt_df.columns)}")
+                st.write(f"- Shape: {cvt_df.shape}")
+                st.write(f"- Técnicos únicos: {cvt_df['tecnico'].unique()}")
+                st.write(f"- Status únicos: {cvt_df['status_cvt'].unique() if 'status_cvt' in cvt_df.columns else 'Coluna status_cvt não encontrada'}")
+                st.write("**📊 Primeiras 5 CVTs:**")
+                st.dataframe(cvt_df.head(5))
     
     if not cvt_df.empty:
         # Filtros para CVTs
