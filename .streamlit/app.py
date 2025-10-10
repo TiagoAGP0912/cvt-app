@@ -119,6 +119,7 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
 
     # Linhas da tabela
     for peca in pecas:
+        linha_altura = 12
         linha_altura = 8
         campos = [
             str(peca.get('peca_codigo', '')),
@@ -157,7 +158,6 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     pdf.ln(10)
     pdf.set_font("Arial", 'I', 10)
     pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
-    pdf.cell(0, 10, txt="Documento somente para teste", ln=1, align='C')
 
     return pdf
 
