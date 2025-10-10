@@ -210,6 +210,24 @@ def criar_botao_download_pdf(pdf, nome_arquivo):
         except Exception as e2:
             st.error(f"Erro ao criar PDF alternativo: {str(e2)}")
 
+
+def debug_cvt_salvar(data, numero_cvt):
+    """Função para debug do salvamento da CVT"""
+    st.write("### 🔧 DEBUG - Dados da CVT sendo salvos:")
+    st.write(f"**Número CVT:** {numero_cvt}")
+    st.write(f"**Técnico:** {data['tecnico']}")
+    st.write(f"**Cliente:** {data['cliente']}")
+    st.write(f"**Endereço:** {data['endereco']}")
+    st.write(f"**Serviço:** {data['servico_realizado'][:50]}...")
+    st.write(f"**Peças requeridas:** {data['pecas_requeridas']}")
+    
+    # Verifica onde está salvando
+    client_info = get_client_and_worksheets()
+    if client_info and client_info["cvt"]:
+        st.write("**Local:** Google Sheets")
+    else:
+        st.write("**Local:** CSV Local")
+
 # --- Inicialização do Google Sheets ---
 def init_gsheets():
     """
