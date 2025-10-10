@@ -468,13 +468,14 @@ def append_cvt(data):
         data["tecnico"],
         data["cliente"],
         data["endereco"],
-        data.get("elevador", ""),
-        data["servico_realizado"],
+        data["servico_realizado"],  # posição correta
         data["obs"],
         data["pecas_requeridas"],
+        data.get("elevador", ""),
         "SALVO",
         numero_cvt
     ]
+
     
     if client_info and client_info["cvt"]:
         success = append_to_sheet(client_info["cvt"], row)
