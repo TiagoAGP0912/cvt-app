@@ -317,10 +317,18 @@ def append_to_sheet(worksheet, row):
 def read_from_sheet(worksheet):
     """Lê dados do Google Sheets"""
     try:
+        st.write(f"📖 Lendo dados da worksheet: {worksheet.title}")
         records = worksheet.get_all_records()
-        return pd.DataFrame(records)
+        df = pd.DataFrame(records)
+        
+        # DEBUG
+        st.write(f"📊 Registros brutos do Sheets: {len(records)}")
+        if records:
+            st.write(f"📋 Primeiro registro: {records[0]}")
+        
+        return df
     except Exception as e:
-        st.error(f"Erro ao ler do Sheets: {str(e)}")
+        st.error(f"❌ Erro ao ler do Sheets: {str(e)}")
         return pd.DataFrame()
 
 # --- Funções para Clientes ---
@@ -542,21 +550,40 @@ def read_all_cvt():
     client_info = get_client_and_worksheets()
     
     if client_info and client_info["cvt"]:
-        df = read_from_sheet(client_info["cvt"])
-        # DEBUG
-        if not df.empty:
-            st.write(f"🔍 DEBUG - CVTs encontradas no Sheets: {len(df)}")
-            st.write(f"🔍 DEBUG - Colunas: {list(df.columns)}")
-        return df
-    else:
-        if os.path.exists(CVT_CSV):
-            df = pd.read_csv(CVT_CSV)
-            # DEBUG
+        try:
+            st.write("🔍 Lendo CVTs do Google Sheets...")
+            df = read_from_sheet(client_info["cvt"])
+            
+            # DEBUG: Mostrar informações sobre o DataFrame
+            st.write(f"📊 CVTs encontradas no Sheets: {len(df)}")
             if not df.empty:
-                st.write(f"🔍 DEBUG - CVTs encontradas no CSV: {len(df)}")
-                st.write(f"🔍 DEBUG - Colunas: {list(df.columns)}")
+                st.write(f"📋 Colunas: {list(df.columns)}")
+                st.write(f"👥 Técnicos únicos: {df['tecnico'].unique() if 'tecnico' in df.columns else 'Coluna tecnico não encontrada'}")
+                st.write(f"🔢 Amostra de dados:")
+                st.dataframe(df.head(3))
+            else:
+                st.warning("⚠️ DataFrame vazio retornado do Google Sheets")
+            
             return df
+        except Exception as e:
+            st.error(f"❌ Erro ao ler do Google Sheets: {str(e)}")
+            # Fallback para CSV
+            if os.path.exists(CVT_CSV):
+                st.info("📁 Usando fallback para CSV...")
+                return pd.read_csv(CVT_CSV)
+            return pd.DataFrame(columns=CVT_COLUMNS)
+    else:
+        # Fallback para CSV
+        if os.path.exists(CVT_CSV):
+            st.write("🔍 Lendo CVTs do CSV local...")
+            df = pd.read_csv(CVT_CSV)
+            st.write(f"📊 CVTs encontradas no CSV: {len(df)}")
+            if not df.empty:
+                st.write(f"📋 Colunas: {list(df.columns)}")
+            return df
+        st.info("📁 Nenhum arquivo CSV local encontrado")
         return pd.DataFrame(columns=CVT_COLUMNS)
+
 
 # --- Funções para Requisições ---
 def append_requisicao(data):
@@ -1234,50 +1261,69 @@ def supervisor_panel():
             st.info("Nenhuma requisição encontrada para estatísticas.")
     
     with tab3:
-        st.subheader("CVTs dos Técnicos")
+    st.subheader("CVTs dos Técnicos")
+    
+    cvt_df = read_all_cvt()
+    
+    # DEBUG EXTENDIDO
+    st.write("### 🔍 DEBUG - Status da Leitura")
+    st.write(f"**Total de CVTs carregadas:** {len(cvt_df)}")
+    
+    if not cvt_df.empty:
+        st.write("**📋 Estrutura do DataFrame:**")
+        st.write(f"- Colunas: {list(cvt_df.columns)}")
+        st.write(f"- Shape: {cvt_df.shape}")
+        st.write(f"- Técnicos únicos: {cvt_df['tecnico'].unique()}")
+        st.write(f"- Status únicos: {cvt_df['status_cvt'].unique() if 'status_cvt' in cvt_df.columns else 'Coluna status_cvt não encontrada'}")
         
-        cvt_df = read_all_cvt()
-        if not cvt_df.empty:
-            # DEBUG
-            st.write(f"🔍 Total de CVTs encontradas: {len(cvt_df)}")
-            st.write(f"🔍 Colunas disponíveis: {list(cvt_df.columns)}")
-            
-            # Filtros para CVTs
-            col1, col2 = st.columns(2)
-            with col1:
-                tecnico_cvt_filter = st.selectbox(
-                    "Filtrar por Técnico", 
-                    ["Todos"] + sorted(cvt_df["tecnico"].unique()),
-                    key="tecnico_cvt_filter"
-                )
-            with col2:
-                status_cvt_filter = st.selectbox(
-                    "Filtrar por Status",
-                    ["Todos"] + sorted(cvt_df["status_cvt"].unique()),
-                    key="status_cvt_filter"
-                )
-            
-            # Aplicar filtros
-            filtered_cvts = cvt_df.copy()
-            if tecnico_cvt_filter != "Todos":
-                filtered_cvts = filtered_cvts[filtered_cvts["tecnico"] == tecnico_cvt_filter]
-            if status_cvt_filter != "Todos":
-                filtered_cvts = filtered_cvts[filtered_cvts["status_cvt"] == status_cvt_filter]
-            
-            st.write(f"**CVTs encontradas:** {len(filtered_cvts)}")
-            
-            # Formatar datas para exibição
-            display_cvts = filtered_cvts.copy()
+        st.write("**📊 Primeiras 3 linhas:**")
+        st.dataframe(cvt_df.head(3))
+        
+        # Filtros para CVTs
+        col1, col2 = st.columns(2)
+        with col1:
+            tecnico_cvt_filter = st.selectbox(
+                "Filtrar por Técnico", 
+                ["Todos"] + sorted(cvt_df["tecnico"].unique()),
+                key="tecnico_cvt_filter"
+            )
+        with col2:
+            status_cvt_filter = st.selectbox(
+                "Filtrar por Status",
+                ["Todos"] + sorted(cvt_df["status_cvt"].unique()) if 'status_cvt' in cvt_df.columns else ["Todos"],
+                key="status_cvt_filter"
+            )
+        
+        # Aplicar filtros
+        filtered_cvts = cvt_df.copy()
+        if tecnico_cvt_filter != "Todos":
+            filtered_cvts = filtered_cvts[filtered_cvts["tecnico"] == tecnico_cvt_filter]
+        if status_cvt_filter != "Todos" and 'status_cvt' in filtered_cvts.columns:
+            filtered_cvts = filtered_cvts[filtered_cvts["status_cvt"] == status_cvt_filter]
+        
+        st.write(f"**CVTs encontradas após filtro:** {len(filtered_cvts)}")
+        
+        # Formatar datas para exibição
+        display_cvts = filtered_cvts.copy()
+        if 'created_at' in display_cvts.columns:
             try:
                 display_cvts["created_at"] = pd.to_datetime(display_cvts["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
             except:
                 display_cvts["created_at"] = display_cvts["created_at"].astype(str)
-            
-            # Mostrar tabela com colunas selecionadas
-            cols_to_show = ["numero_cvt", "tecnico", "cliente", "created_at", "status_cvt"]
-            st.dataframe(display_cvts[cols_to_show].sort_values("created_at", ascending=False), use_container_width=True)
+        
+        # Mostrar tabela com colunas selecionadas
+        cols_disponiveis = []
+        for col in ["numero_cvt", "tecnico", "cliente", "created_at", "status_cvt"]:
+            if col in display_cvts.columns:
+                cols_disponiveis.append(col)
+        
+        if cols_disponiveis:
+            st.dataframe(display_cvts[cols_disponiveis].sort_values("created_at" if "created_at" in cols_disponiveis else "numero_cvt", ascending=False), 
+                        use_container_width=True)
         else:
-            st.info("Nenhuma CVT encontrada.")
+            st.error("❌ Nenhuma coluna de exibição disponível")
+    else:
+        st.info("ℹ️ Nenhuma CVT encontrada no sistema.")
     
     with tab4:
         st.subheader("📄 Gerar PDF de CVTs")
