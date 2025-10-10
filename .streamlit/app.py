@@ -424,7 +424,11 @@ def login_form():
                 st.session_state.role = match.get("role", "TECNICO")
                 st.session_state.user_nome = match.get("nome", username)
                 st.success(f"Bem-vindo, {st.session_state.user_nome}!")
-                st.experimental_rerun()
+                st.session_state._rerun_flag = True
+                 if st.session_state.get("_rerun_flag", False):
+                 st.session_state._rerun_flag = False
+                 st.experimental_rerun()
+
             else:
                 st.error("Usuário ou senha inválidos.")
 
@@ -491,7 +495,12 @@ def seccion_pecas_cvt():
                 st.info("Use remover e readicionar para editar (simplificado).")
             if cols[2].button("🗑️", key=f"del_{i}"):
                 st.session_state.pecas_adicionadas.pop(i)
-                st.experimental_rerun()
+                st.session_state._rerun_flag = True
+
+            if st.session_state.get("_rerun_flag", False):
+               st.session_state._rerun_flag = False
+               st.experimental_rerun()
+
 
 # ----------------------
 # INTERFACE: Formulário de CVT (simplificado)
@@ -540,7 +549,11 @@ def cvt_form():
                     "tecnico": st.session_state.get("user_nome", "Desconhecido")
                 }
                 st.session_state.mostrar_pecas = True
-                st.experimental_rerun()
+                st.session_state._rerun_flag = True
+            if st.session_state.get("_rerun_flag", False):
+             st.session_state._rerun_flag = False
+              st.experimental_rerun()
+
 
         if salvar:
             if not cliente:
@@ -560,7 +573,8 @@ def cvt_form():
                     st.success(f"CVT {nro} salva com sucesso!")
                     st.session_state.cvt_salva = True
                     st.session_state.numero_cvt_salva = nro
-                    st.experimental_rerun()
+                    st.session_state._rerun_flag = True
+
 
     # Seção de peças (após pedir peças)
     if st.session_state.get("mostrar_pecas", False):
