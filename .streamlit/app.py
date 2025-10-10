@@ -26,7 +26,7 @@ USERS_CSV = "users_local.csv"
 CLIENTES_CSV = "clientes_local.csv"
 PECAS_CSV = "pecas_local.csv"
 
-# Colunas das planilhas
+# Colunas das planilhas - VERIFICAR ORDEM CORRETA
 CVT_COLUMNS = [
     "created_at", "tecnico", "cliente", "endereco", "servico_realizado", 
     "obs", "pecas_requeridas", "elevador", "status_cvt", "numero_cvt"
@@ -165,9 +165,6 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     
     return pdf
 
-
-
-    
 def criar_botao_download_pdf(pdf, nome_arquivo):
     """Cria um botão de download para o PDF"""
     try:
@@ -209,7 +206,6 @@ def criar_botao_download_pdf(pdf, nome_arquivo):
             
         except Exception as e2:
             st.error(f"Erro ao criar PDF alternativo: {str(e2)}")
-
 
 def debug_cvt_salvar(data, numero_cvt):
     """Função para debug do salvamento da CVT"""
@@ -479,7 +475,6 @@ def render_campos_dinamicos(campos):
     return valores
 
 # --- Usa o tempo de Brasília ---
-
 def get_brasilia_time():
     """Retorna o horário atual no fuso horário de Brasília (UTC-3)"""
     utc_now = datetime.datetime.utcnow()
@@ -497,45 +492,70 @@ def append_cvt(data):
     # Gera número único para CVT com horário correto
     numero_cvt = f"CVT-{data_hora_brasilia.strftime('%Y%m%d-%H%M%S')}"
     
+    # CORREÇÃO CRÍTICA: Ordem das colunas deve corresponder EXATAMENTE à CVT_COLUMNS
     row = [
-        data_hora_brasilia.isoformat(),
-        data["tecnico"],
-        data["cliente"],
-        data["endereco"],
-        data.get("elevador", ""),
-        data["servico_realizado"],
-        data["obs"],
-        data["pecas_requeridas"],
-        "SALVO",
-        numero_cvt
+        data_hora_brasilia.isoformat(),  # created_at
+        data["tecnico"],                 # tecnico
+        data["cliente"],                 # cliente
+        data["endereco"],                # endereco
+        data["servico_realizado"],       # servico_realizado
+        data["obs"],                     # obs
+        data["pecas_requeridas"],        # pecas_requeridas
+        data.get("elevador", ""),        # elevador
+        "SALVO",                         # status_cvt
+        numero_cvt                       # numero_cvt
     ]
+    
+    # DEBUG - Mostrar o que está sendo salvo
+    st.write("### 🔍 DEBUG - Dados sendo salvos:")
+    st.write(f"**Ordem das colunas:** {CVT_COLUMNS}")
+    st.write(f"**Dados na linha:** {row}")
     
     if client_info and client_info["cvt"]:
         success = append_to_sheet(client_info["cvt"], row)
         if success:
             st.success(f"CVT {numero_cvt} salva com sucesso no Google Sheets!")
             return numero_cvt
+        else:
+            st.error("Falha ao salvar no Google Sheets!")
+            return None
     else:
         # Fallback para CSV
         df = pd.DataFrame([row], columns=CVT_COLUMNS)
         if os.path.exists(CVT_CSV):
-            existing_df = pd.read_csv(CVT_CSV)
-            df = pd.concat([existing_df, df], ignore_index=True)
-        df.to_csv(CVT_CSV, index=False)
-        st.success(f"CVT {numero_cvt} salva localmente!")
-        return numero_cvt
-    
-    return None
+            try:
+                existing_df = pd.read_csv(CVT_CSV)
+                df = pd.concat([existing_df, df], ignore_index=True)
+            except Exception as e:
+                st.warning(f"Erro ao ler CSV existente, criando novo: {e}")
+        
+        try:
+            df.to_csv(CVT_CSV, index=False)
+            st.success(f"CVT {numero_cvt} salva localmente no CSV!")
+            return numero_cvt
+        except Exception as e:
+            st.error(f"Erro ao salvar CSV: {e}")
+            return None
 
 def read_all_cvt():
     """Lê todas as CVTs"""
     client_info = get_client_and_worksheets()
     
     if client_info and client_info["cvt"]:
-        return read_from_sheet(client_info["cvt"])
+        df = read_from_sheet(client_info["cvt"])
+        # DEBUG
+        if not df.empty:
+            st.write(f"🔍 DEBUG - CVTs encontradas no Sheets: {len(df)}")
+            st.write(f"🔍 DEBUG - Colunas: {list(df.columns)}")
+        return df
     else:
         if os.path.exists(CVT_CSV):
-            return pd.read_csv(CVT_CSV)
+            df = pd.read_csv(CVT_CSV)
+            # DEBUG
+            if not df.empty:
+                st.write(f"🔍 DEBUG - CVTs encontradas no CSV: {len(df)}")
+                st.write(f"🔍 DEBUG - Colunas: {list(df.columns)}")
+            return df
         return pd.DataFrame(columns=CVT_COLUMNS)
 
 # --- Funções para Requisições ---
@@ -543,17 +563,20 @@ def append_requisicao(data):
     """Salva requisição de peças"""
     client_info = get_client_and_worksheets()
     
+    # CORREÇÃO: Usar horário de Brasília também para requisições
+    data_hora_brasilia = get_brasilia_time()
+    
     row = [
-        datetime.datetime.now().isoformat(),
-        data["tecnico"],
-        data["numero_cvt"],
-        data.get("ordem_id", ""),
-        data["peca_codigo"],
-        data["peca_descricao"],
-        data["quantidade"],
-        "PENDENTE",
-        data.get("prioridade", "NORMAL"),
-        data.get("observacoes", "")
+        data_hora_brasilia.isoformat(),  # created_at
+        data["tecnico"],                 # tecnico
+        data["numero_cvt"],              # numero_cvt
+        data.get("ordem_id", ""),        # ordem_id
+        data["peca_codigo"],             # peca_codigo
+        data["peca_descricao"],          # peca_descricao
+        data["quantidade"],              # quantidade
+        "PENDENTE",                      # status
+        data.get("prioridade", "NORMAL"),# prioridade
+        data.get("observacoes", "")      # observacoes
     ]
     
     if client_info and client_info["req"]:
@@ -989,7 +1012,7 @@ def cvt_form():
 
         # Busca os dados da CVT salva
         cvt_df = read_all_cvt()
-        cvt_salva_df = cvt_df[cvt_df['numero_cvt'] == numero_cvt]  # Renomeei para evitar conflito
+        cvt_salva_df = cvt_df[cvt_df['numero_cvt'] == numero_cvt]
         
         if not cvt_salva_df.empty:
             dados_cvt = cvt_salva_df.iloc[0].to_dict()
@@ -1145,11 +1168,12 @@ def supervisor_panel():
     
     st.header("Painel de Gerenciamento")
     
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📦 Todas as Requisições", 
         "📊 Estatísticas", 
         "👥 CVTs",
-        "📄 Gerar PDFs"
+        "📄 Gerar PDFs",
+        "🔍 DEBUG CVTs"
     ])
     
     with tab1:
@@ -1214,6 +1238,10 @@ def supervisor_panel():
         
         cvt_df = read_all_cvt()
         if not cvt_df.empty:
+            # DEBUG
+            st.write(f"🔍 Total de CVTs encontradas: {len(cvt_df)}")
+            st.write(f"🔍 Colunas disponíveis: {list(cvt_df.columns)}")
+            
             # Filtros para CVTs
             col1, col2 = st.columns(2)
             with col1:
@@ -1357,6 +1385,24 @@ def supervisor_panel():
                 
         else:
             st.info("Nenhuma CVT encontrada no sistema.")
+    
+    with tab5:
+        st.subheader("🔍 DEBUG - Todas as CVTs")
+        cvt_df = read_all_cvt()
+        
+        st.write(f"**Total de CVTs no sistema:** {len(cvt_df)}")
+        
+        if not cvt_df.empty:
+            st.write("**Colunas disponíveis:**", list(cvt_df.columns))
+            st.write("**Primeiras 5 CVTs:**")
+            st.dataframe(cvt_df.head())
+            
+            # Mostrar estatísticas por técnico
+            st.write("**CVTs por Técnico:**")
+            tech_stats = cvt_df['tecnico'].value_counts()
+            st.write(tech_stats)
+        else:
+            st.info("Nenhuma CVT encontrada para debug.")
 
 # --- Interface Principal ---
 def main_interface():
@@ -1376,7 +1422,7 @@ def main_interface():
         if st.button("Sair", use_container_width=True):
             logout()
     
-    # Menu de navegação - REMOVIDA A ABA "REQUISIÇÃO"
+    # Menu de navegação
     if st.session_state["role"] == "SUPERVISOR":
         menu_options = [" Nova CVT", " Minhas Req", "Gerenciamento"]
         menu_icons = ["file-earmark-text", "clipboard", "person-badge"]
