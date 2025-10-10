@@ -856,7 +856,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-path = Path("/mnt/data/cvt_app_refeito.py")
-path.write_text(optimized_code, encoding="utf-8")
-path
+
