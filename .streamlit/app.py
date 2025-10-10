@@ -101,54 +101,48 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
         pdf.multi_cell(0, 8, txt=str(dados_cvt.get('obs', '')))
         pdf.ln(5)
     
-# Seção de Peças (se houver)
-if pecas and len(pecas) > 0:
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
-    pdf.set_font("Arial", size=9)
+    # Seção de Peças (se houver)
+    if pecas and len(pecas) > 0:
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
+        pdf.set_font("Arial", size=10)
+        
+        # Cabeçalho da tabela
+        pdf.set_fill_color(200, 200, 200)
+        pdf.cell(30, 8, "Código", 1, 0, 'C', True)
+        pdf.cell(80, 8, "Descrição", 1, 0, 'C', True)
+        pdf.cell(20, 8, "Qtd", 1, 0, 'C', True)
+        pdf.cell(30, 8, "Prioridade", 1, 0, 'C', True)
+        pdf.cell(30, 8, "Observações", 1, 1, 'C', True)
+        
+        # Dados das peças
+        pdf.set_font("Arial", size=9)
+        for peca in pecas:
+            # Quebra linha se a descrição for muito longa
+            descricao = peca.get('peca_descricao', '')
+            if len(descricao) > 50:
+                descricao = descricao[:47] + "..."
+            
+            pdf.cell(30, 8, str(peca.get('peca_codigo', '')), 1)
+            pdf.cell(80, 8, str(descricao), 1)
+            pdf.cell(20, 8, str(peca.get('quantidade', '')), 1, 0, 'C')
+            pdf.cell(30, 8, str(peca.get('prioridade', '')), 1, 0, 'C')
+            
+            # Trunca observações muito longas
+            obs = peca.get('observacoes', '')
+            if len(obs) > 20:
+                obs = obs[:17] + "..."
+            pdf.cell(30, 8, str(obs), 1, 1)
+        
+        pdf.ln(5)
     
-    # Cabeçalho
-    pdf.set_fill_color(200, 200, 200)
-    col_widths = [25, 70, 15, 25, 65]
-    headers = ["Código", "Descrição", "Qtd", "Prioridade", "Observações"]
-    for i, h in enumerate(headers):
-        pdf.cell(col_widths[i], 8, h, 1, 0, 'C', True)
-    pdf.ln()
-
-    # Linhas
-    for peca in pecas:
-        y_inicial = pdf.get_y()
-        x_inicial = pdf.get_x()
-        linha_altura = 8
-
-        campos = [
-            str(peca.get('peca_codigo', '')),
-            str(peca.get('peca_descricao', '')),
-            str(peca.get('quantidade', '')),
-            str(peca.get('prioridade', '')),
-            str(peca.get('observacoes', ''))
-        ]
-
-        # Calcula altura máxima da linha (caso multi_cell quebre)
-        alturas = []
-        for i, texto in enumerate(campos):
-            n_linhas = len(pdf.multi_cell(col_widths[i], linha_altura, texto, border=0, align='L', split_only=True))
-            alturas.append(n_linhas * linha_altura)
-        linha_max_altura = max(alturas)
-
-        # Escreve célula a célula com controle de posição
-        for i, texto in enumerate(campos):
-            x = pdf.get_x()
-            y = y_inicial
-            pdf.set_xy(x, y)
-            pdf.multi_cell(col_widths[i], linha_altura, texto, border=1, align='L')
-            pdf.set_xy(x + col_widths[i], y)
-
-        pdf.set_y(y_inicial + linha_max_altura)
-    pdf.ln(5)
-
-
+    # Rodapé
+    pdf.ln(10)
+    pdf.set_font("Arial", 'I', 10)
+    pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
     
+    return pdf
+
 def criar_botao_download_pdf(pdf, nome_arquivo):
     """Cria um botão de download para o PDF"""
     try:
