@@ -1103,6 +1103,19 @@ def supervisor_panel():
     
     st.header("Painel de Gerenciamento")
     
+    # DEBUG TEMPORÁRIO - Adicione estas linhas
+    st.subheader("🔍 Debug - Dados das CVTs")
+    cvt_df = read_all_cvt()
+    if not cvt_df.empty:
+        st.write(f"Total de CVTs carregadas: {len(cvt_df)}")
+        st.write("Colunas disponíveis:", list(cvt_df.columns))
+        st.write("Amostra dos dados:")
+        st.dataframe(cvt_df.head(3))
+    else:
+        st.info("Nenhuma CVT encontrada na base de dados")
+    
+    # Resto do código do supervisor_panel...
+    
     tab1, tab2, tab3, tab4 = st.tabs([
         "📦 Todas as Requisições", 
         "📊 Estatísticas", 
