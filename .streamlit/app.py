@@ -1261,9 +1261,9 @@ def supervisor_panel():
             st.info("Nenhuma requisição encontrada para estatísticas.")
     
     with tab3:
-    st.subheader("CVTs dos Técnicos")
+        st.subheader("CVTs dos Técnicos")
     
-    cvt_df = read_all_cvt()
+        cvt_df = read_all_cvt()
     
     # DEBUG EXTENDIDO
     st.write("### 🔍 DEBUG - Status da Leitura")
