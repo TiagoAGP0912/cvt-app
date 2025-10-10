@@ -50,26 +50,26 @@ PECAS_COLUMNS = [
 # --- FUNÇÃO PARA GERAR PDF ---
 def gerar_pdf_cvt(dados_cvt, pecas=None):
     """Gera um PDF da CVT com todas as informações"""
-
+    
     pdf = FPDF()
     pdf.add_page()
-
+    
     # Configurações
     pdf.set_font("Arial", size=12)
-
+    
     # Cabeçalho
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(200, 10, txt="COMPROVANTE DE VISITA TÉCNICA", ln=1, align='C')
     pdf.ln(10)
-
+    
     # Informações da CVT
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(200, 10, txt="INFORMAÇÕES DA VISITA", ln=1)
     pdf.set_font("Arial", size=11)
-
+    
     # Dados básicos
     pdf.cell(100, 8, txt=f"Número CVT: {dados_cvt.get('numero_cvt', 'N/A')}", ln=1)
-
+    
     # Formata data
     if 'created_at' in dados_cvt:
         try:
@@ -78,23 +78,23 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
             pdf.cell(100, 8, txt=f"Data/Hora: {data_formatada}", ln=1)
         except:
             pdf.cell(100, 8, txt=f"Data/Hora: {dados_cvt.get('created_at', 'N/A')}", ln=1)
-
+    
     pdf.cell(100, 8, txt=f"Técnico: {dados_cvt.get('tecnico', 'N/A')}", ln=1)
     pdf.cell(100, 8, txt=f"Cliente: {dados_cvt.get('cliente', 'N/A')}", ln=1)
     pdf.cell(100, 8, txt=f"Endereço: {dados_cvt.get('endereco', 'N/A')}", ln=1)
     pdf.cell(100, 8, txt=f"Elevador: {dados_cvt.get('elevador', 'Não informado')}", ln=1)
     pdf.ln(5)
-
+    
     # Serviço Realizado
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(200, 10, txt="SERVIÇO REALIZADO / DIAGNÓSTICO", ln=1)
     pdf.set_font("Arial", size=11)
-
+    
     # Quebra o texto do serviço em múltiplas linhas
     servico = dados_cvt.get('servico_realizado', 'Não informado')
     pdf.multi_cell(0, 8, txt=str(servico))
     pdf.ln(5)
-
+    
     # Observações (se houver)
     if dados_cvt.get('obs'):
         pdf.set_font("Arial", 'B', 12)
@@ -102,13 +102,13 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
         pdf.set_font("Arial", size=11)
         pdf.multi_cell(0, 8, txt=str(dados_cvt.get('obs', '')))
         pdf.ln(5)
-
+    
     # 🔹 Seção de Peças (se houver)
     if isinstance(pecas, (list, tuple)) and len(pecas) > 0:
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(200, 10, txt="PEÇAS SOLICITADAS", ln=1)
         pdf.set_font("Arial", size=9)
-
+        
         # Cabeçalho da tabela
         pdf.set_fill_color(200, 200, 200)
         col_widths = [25, 70, 15, 25, 65]
@@ -119,7 +119,6 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
 
     # Linhas da tabela
     for peca in pecas:
-        linha_altura = 12
         linha_altura = 8
         campos = [
             str(peca.get('peca_codigo', '')),
@@ -145,7 +144,7 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
             x_atual = x_inicial + sum(col_widths[:i])
             pdf.set_xy(x_atual, y_inicial)
             pdf.multi_cell(col_widths[i], linha_altura, texto, border=1, align='L', max_line_height=linha_altura)
-
+            
             # Se a célula tiver menos linhas, completa a borda até a altura máxima
             y_final = y_inicial + linha_max_altura
             pdf.set_xy(x_atual + col_widths[i], y_inicial)
@@ -158,30 +157,30 @@ def gerar_pdf_cvt(dados_cvt, pecas=None):
     pdf.ln(10)
     pdf.set_font("Arial", 'I', 10)
     pdf.cell(0, 10, txt="Documento gerado automaticamente pelo Sistema CVT", ln=1, align='C')
-
+    
     return pdf
 
 
 
-
+    
 def criar_botao_download_pdf(pdf, nome_arquivo):
     """Cria um botão de download para o PDF"""
     try:
         # Método correto para obter o conteúdo do PDF
         pdf_output = pdf.output(dest='S')
-
+        
         # Se já é uma string, apenas encode
         if isinstance(pdf_output, str):
             pdf_bytes = pdf_output.encode('latin-1')
         else:
             # Se for bytes, use diretamente
             pdf_bytes = pdf_output
-
+            
         b64_pdf = base64.b64encode(pdf_bytes).decode()
-
+        
         href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{nome_arquivo}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; font-weight: bold;">📄 Baixar PDF da CVT</a>'
         st.markdown(href, unsafe_allow_html=True)
-
+        
     except Exception as e:
         st.error(f"Erro ao gerar PDF: {str(e)}")
         # Fallback: criar um botão de download alternativo
@@ -189,20 +188,20 @@ def criar_botao_download_pdf(pdf, nome_arquivo):
             # Salva em um arquivo temporário e lê os bytes
             import tempfile
             import os
-
+            
             with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
                 pdf.output(tmp.name)
                 tmp.flush()
                 with open(tmp.name, 'rb') as f:
                     pdf_bytes = f.read()
-
+                
                 b64_pdf = base64.b64encode(pdf_bytes).decode()
                 href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{nome_arquivo}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px; font-weight: bold;">📄 Baixar PDF da CVT</a>'
                 st.markdown(href, unsafe_allow_html=True)
-
+                
             # Limpa o arquivo temporário
             os.unlink(tmp.name)
-
+            
         except Exception as e2:
             st.error(f"Erro ao criar PDF alternativo: {str(e2)}")
 
@@ -214,7 +213,7 @@ def init_gsheets():
     try:
         import gspread
         from oauth2client.service_account import ServiceAccountCredentials
-
+        
         creds_json = None
         if "gcp_service_account" in st.secrets:
             try:
@@ -237,7 +236,7 @@ def init_gsheets():
         creds = ServiceAccountCredentials.from_json_keyfile_dict(sa_info, scope)
         client = gspread.authorize(creds)
         return client
-
+        
     except ImportError:
         st.warning("Bibliotecas Google não instaladas. Usando CSV local.")
         return None
@@ -251,7 +250,7 @@ def get_client_and_worksheets():
     client = init_gsheets()
     if not client:
         return None
-
+        
     try:
         # Tenta abrir a planilha existente
         spreadsheet = client.open(SHEET_NAME)
@@ -283,7 +282,7 @@ def get_client_and_worksheets():
         "clientes": ensure_worksheet(CLIENTES_SHEET),
         "pecas": ensure_worksheet(PECAS_SHEET),
     }
-
+    
     return worksheets
 
 # --- Operações com dados ---
@@ -309,7 +308,7 @@ def read_from_sheet(worksheet):
 def load_clientes():
     """Carrega lista de clientes do Google Sheets"""
     client_info = get_client_and_worksheets()
-
+    
     if client_info and client_info["clientes"]:
         try:
             df = read_from_sheet(client_info["clientes"])
@@ -318,14 +317,14 @@ def load_clientes():
             return df
         except Exception as e:
             st.error(f"Erro ao carregar clientes: {str(e)}")
-
+    
     # Fallback para CSV
     if os.path.exists(CLIENTES_CSV):
         df = pd.read_csv(CLIENTES_CSV)
         if 'ativo' in df.columns:
             df = df[df['ativo'].str.upper() == 'SIM']
         return df
-
+    
     return pd.DataFrame()
 
 def get_cliente_by_nome(nome):
@@ -341,7 +340,7 @@ def get_cliente_by_nome(nome):
 def load_pecas():
     """Carrega lista de peças do Google Sheets"""
     client_info = get_client_and_worksheets()
-
+    
     if client_info and client_info["pecas"]:
         try:
             df = read_from_sheet(client_info["pecas"])
@@ -350,14 +349,14 @@ def load_pecas():
             return df
         except Exception as e:
             st.error(f"Erro ao carregar peças: {str(e)}")
-
+    
     # Fallback para CSV
     if os.path.exists(PECAS_CSV):
         df = pd.read_csv(PECAS_CSV)
         if 'ativo' in df.columns:
             df = df[df['ativo'].str.upper() == 'SIM']
         return df
-
+    
     return pd.DataFrame()
 
 def get_peca_by_codigo(codigo):
@@ -383,12 +382,12 @@ def get_campos_por_peca(codigo_peca):
 def render_campos_dinamicos(campos):
     """Renderiza campos dinâmicos baseado na lista"""
     valores = {}
-
+    
     if not campos:
         return valores
-
+    
     st.subheader(" Informações Específicas da Peça")
-
+    
     for campo in campos:
         if campo == 'pavimento':
             valores['pavimento'] = st.selectbox(
@@ -453,17 +452,17 @@ def render_campos_dinamicos(campos):
         else:
             # Campo genérico para qualquer outro
             valores[campo] = st.text_input(f"{campo.replace('_', ' ').title()}")
-
+    
     return valores
 
 # --- Funções para CVT ---
 def append_cvt(data):
     """Salva CVT no Google Sheets ou CSV"""
     client_info = get_client_and_worksheets()
-
+    
     # Gera número único para CVT
     numero_cvt = f"CVT-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
-
+    
     row = [
         datetime.datetime.now().isoformat(),
         data["tecnico"],
@@ -476,7 +475,7 @@ def append_cvt(data):
         "SALVO",
         numero_cvt
     ]
-
+    
     if client_info and client_info["cvt"]:
         success = append_to_sheet(client_info["cvt"], row)
         if success:
@@ -491,13 +490,13 @@ def append_cvt(data):
         df.to_csv(CVT_CSV, index=False)
         st.success(f"CVT {numero_cvt} salva localmente!")
         return numero_cvt
-
+    
     return None
 
 def read_all_cvt():
     """Lê todas as CVTs"""
     client_info = get_client_and_worksheets()
-
+    
     if client_info and client_info["cvt"]:
         return read_from_sheet(client_info["cvt"])
     else:
@@ -509,7 +508,7 @@ def read_all_cvt():
 def append_requisicao(data):
     """Salva requisição de peças"""
     client_info = get_client_and_worksheets()
-
+    
     row = [
         datetime.datetime.now().isoformat(),
         data["tecnico"],
@@ -522,7 +521,7 @@ def append_requisicao(data):
         data.get("prioridade", "NORMAL"),
         data.get("observacoes", "")
     ]
-
+    
     if client_info and client_info["req"]:
         success = append_to_sheet(client_info["req"], row)
         if success:
@@ -538,7 +537,7 @@ def append_requisicao(data):
 def read_all_requisicoes():
     """Lê todas as requisições"""
     client_info = get_client_and_worksheets()
-
+    
     if client_info and client_info["req"]:
         return read_from_sheet(client_info["req"])
     else:
@@ -550,16 +549,16 @@ def read_all_requisicoes():
 def load_users():
     """Carrega usuários do Google Sheets ou CSV"""
     client_info = get_client_and_worksheets()
-
+    
     if client_info and client_info["users"]:
         users_df = read_from_sheet(client_info["users"])
         if not users_df.empty:
             return users_df.to_dict('records')
-
+    
     # Fallback para CSV
     if os.path.exists(USERS_CSV):
         return pd.read_csv(USERS_CSV).to_dict('records')
-
+    
     # Usuários padrão
     return [
         {"username": "tecnico1", "password": "123", "role": "TECNICO", "nome": "João Silva"},
@@ -570,19 +569,19 @@ def load_users():
 def login_form():
     """Formulário de login"""
     st.markdown("## 🔐 Login - Sistema CVT")
-
+    
     with st.form("login_form"):
         username = st.text_input("Usuário")
         password = st.text_input("Senha", type="password")
         submit = st.form_submit_button("Entrar")
-
+        
         if submit:
             users = load_users()
             user_match = next(
                 (u for u in users if u["username"] == username and str(u["password"]) == str(password)),
                 None
             )
-
+            
             if user_match:
                 st.session_state.update({
                     "authenticated": True,
@@ -607,10 +606,10 @@ def seccion_pecas_cvt():
     """Seção de peças que aparece quando clica em 'Pedir peças'"""
     st.markdown("---")
     st.subheader("⚙️ Pedido de Peças")
-
+    
     # Carrega lista de peças
     pecas_df = load_pecas()
-
+    
     # Inicializa listas e estados
     if 'pecas_adicionadas' not in st.session_state:
         st.session_state.pecas_adicionadas = []
@@ -618,23 +617,23 @@ def seccion_pecas_cvt():
         st.session_state.peca_em_edicao = None
     if 'peca_temp_campos' not in st.session_state:
         st.session_state.peca_temp_campos = {}
-
+    
     # ---------- FORM 1: Selecionar peça e abrir campos ----------
     with st.form("form_select_peca"):
         col1, col2 = st.columns([1, 2])
-
+        
         with col1:
             if not pecas_df.empty:
                 peca_options = pecas_df[['codigo', 'descricao', 'categoria']].apply(
                     lambda x: f"{x['codigo']} - {x['descricao']} ({x['categoria']})", axis=1
                 ).tolist()
-
+                
                 peca_selecionada = st.selectbox(
                     "Selecionar Peça", 
                     options=[""] + peca_options,
                     key="select_peca_cvt"
                 )
-
+                
                 codigo_peca = ""
                 descricao_peca = ""
                 peca_info = None
@@ -649,13 +648,13 @@ def seccion_pecas_cvt():
                 st.info("Nenhuma peça cadastrada")
                 codigo_peca = st.text_input("Código da Peça", placeholder="Código interno")
                 descricao_peca = st.text_input("Descrição da Peça", placeholder="Descrição detalhada")
-
+        
         with col2:
             prioridade_temp = st.selectbox("Prioridade", ["NORMAL", "URGENTE"], key="prio_peca_select")
             observacoes_temp = st.text_area("Observações", placeholder="Observações específicas...", key="obs_peca_select")
-
+        
         abrir_campos = st.form_submit_button("➕ Abrir Campos para Detalhes")
-
+        
         if abrir_campos:
             # Valida e abre o modo de edição (não salva ainda)
             if not pecas_df.empty and peca_selecionada:
@@ -676,27 +675,27 @@ def seccion_pecas_cvt():
                 else:
                     st.error("Preencha código e descrição da peça para abrir os campos.")
                     st.session_state.peca_em_edicao = None
-
+            
             # Salva temporariamente prioridade e observações
             st.session_state.peca_temp_campos = {
                 "prioridade": prioridade_temp,
                 "observacoes": observacoes_temp
             }
             st.rerun()
-
+    
     # ---------- FORM 2: editar os detalhes e salvar ----------
     if st.session_state.peca_em_edicao:
         peca_edit = st.session_state.peca_em_edicao
         st.markdown("---")
         st.subheader(f"✍️ Detalhes da Peça: {peca_edit['descricao']}")
-
+        
         codigo_edit = peca_edit['codigo']
         campos_especificos = get_campos_por_peca(codigo_edit) if not pecas_df.empty else []
-
+        
         with st.form("form_editar_peca"):
             # Campos dinâmicos (se houver)
             valores_campos = render_campos_dinamicos(campos_especificos)
-
+            
             # Agora sim: quantidade só aqui
             quantidade = st.number_input("Quantidade", min_value=1, value=1, key="qtd_peca_edit")
             prioridade = st.selectbox(
@@ -710,18 +709,18 @@ def seccion_pecas_cvt():
                 value=st.session_state.peca_temp_campos.get('observacoes', ''),
                 key="obs_peca_edit"
             )
-
+            
             col_salvar, col_cancel = st.columns([1,1])
             with col_salvar:
                 salvar_peca = st.form_submit_button("💾 Salvar Peça")
             with col_cancel:
                 cancelar = st.form_submit_button("↩️ Cancelar")
-
+            
             if salvar_peca:
                 dados_extras = ""
                 if valores_campos:
                     dados_extras = " | ".join([f"{k}: {v}" for k, v in valores_campos.items()])
-
+                
                 peca_data = {
                     "codigo": codigo_edit,
                     "descricao": peca_edit['descricao'],
@@ -730,24 +729,24 @@ def seccion_pecas_cvt():
                     "prioridade": prioridade,
                     "observacoes": observacoes_peca
                 }
-
+                
                 st.session_state.pecas_adicionadas.append(peca_data)
                 st.success(f"Peça {peca_edit['descricao']} adicionada à lista!")
-
+                
                 st.session_state.peca_em_edicao = None
                 st.session_state.peca_temp_campos = {}
                 st.rerun()
-
+            
             if cancelar:
                 st.session_state.peca_em_edicao = None
                 st.session_state.peca_temp_campos = {}
                 st.rerun()
-
+    
     # ---------- Lista final de peças ----------
     if st.session_state.pecas_adicionadas:
         st.markdown("---")
         st.subheader(" Peças na Lista")
-
+        
         for i, peca in enumerate(st.session_state.pecas_adicionadas):
             col_peca1, col_peca2, col_peca3 = st.columns([3, 1, 1])
             with col_peca1:
@@ -771,16 +770,16 @@ def seccion_pecas_cvt():
 def cvt_form():
     """Formulário para preenchimento de CVT - Peças aparecem só quando solicitado"""
     st.header(" Comprovante de Visita Técnica")
-
+    
     # Carrega lista de clientes
     clientes_df = load_clientes()
-
+    
     with st.form("cvt_form", clear_on_submit=False):
         st.subheader("Dados da Visita")
-
+        
         # Seleção de cliente
         col1, col2 = st.columns([2, 1])
-
+        
         with col1:
             if not clientes_df.empty and 'nome' in clientes_df.columns:
                 cliente_options = clientes_df['nome'].tolist()
@@ -789,7 +788,7 @@ def cvt_form():
                     options=[""] + cliente_options,
                     help="Selecione o cliente da lista"
                 )
-
+                
                 # Busca endereço automaticamente quando cliente é selecionado
                 endereco_cliente = ""
                 cliente_info = None
@@ -801,7 +800,7 @@ def cvt_form():
                 st.info("Nenhum cliente cadastrado na base de dados")
                 cliente_selecionado = st.text_input("Cliente *", placeholder="Nome do cliente")
                 endereco_cliente = st.text_input("Endereço *", placeholder="Endereço completo")
-
+        
         with col2:
             # Mostra informações do cliente selecionado
             if cliente_selecionado and cliente_info is not None:
@@ -810,7 +809,7 @@ def cvt_form():
                     st.text(f"📞 {cliente_info.get('telefone', 'N/A')}")
                 if 'responsavel' in cliente_info:
                     st.text(f"👤 {cliente_info.get('responsavel', 'N/A')}")
-
+        
         # Endereço (preenchido automaticamente ou manual)
         endereco = st.text_input("Endereço *", value=endereco_cliente, 
                                placeholder="Endereço completo da visita")
@@ -820,21 +819,21 @@ def cvt_form():
             ["", "Principal", "Secundário", "Ambos"],
             help="Selecione em qual elevador o serviço foi realizado"
         )
-
+        
         servico_realizado = st.text_area("Serviço Realizado/Diagnóstico *", 
                                        placeholder="Descreva detalhadamente o serviço executado...",
                                        height=100)
         observacoes = st.text_area("Observações Adicionais", 
                                  placeholder="Observações, recomendações, etc...",
                                  height=80)
-
+        
         # BOTÃO PARA PEDIR PEÇAS - aparece no final do formulário principal
         col_btn1, col_btn2 = st.columns([1, 3])
         with col_btn1:
             pedir_pecas = st.form_submit_button("⚙️ Pedir Peças")
         with col_btn2:
             salvar_sem_pecas = st.form_submit_button("✅ Salvar CVT sem Peças")
-
+        
         if pedir_pecas:
             if not all([cliente_selecionado, endereco, elevador, servico_realizado]):
                 st.error("Preencha todos os campos obrigatórios da CVT (*) antes de pedir peças")
@@ -848,7 +847,7 @@ def cvt_form():
                     "obs": observacoes
                 }
                 st.rerun()
-
+        
         if salvar_sem_pecas:
             if not all([cliente_selecionado, endereco, elevador, servico_realizado]):
                 st.error("Preencha todos os campos obrigatórios (*)")
@@ -884,10 +883,10 @@ def cvt_form():
             st.write(f"**Serviço:** {dados_temp['servico_realizado'][:100]}...")
             if dados_temp['obs']:
                 st.write(f"**Obs:** {dados_temp['obs'][:100]}...")
-
+        
         # Chama a seção de peças
         seccion_pecas_cvt()
-
+        
         # Botão para SALVAR CVT COM PEÇAS
         st.markdown("---")
         col_save1, col_save2, col_save3 = st.columns([1, 1, 1])
@@ -907,7 +906,7 @@ def cvt_form():
                         "pecas_requeridas": ", ".join([f"{p['codigo']} ({p['quantidade']})" for p in st.session_state.pecas_adicionadas])
                     }
                     numero_cvt = append_cvt(cvt_data)
-
+                    
                     if numero_cvt:
                         # Salva cada peça como requisição
                         for peca in st.session_state.pecas_adicionadas:
@@ -922,9 +921,9 @@ def cvt_form():
                                 "observacoes": peca['observacoes']
                             }
                             append_requisicao(req_data)
-
+                        
                         st.success(f"CVT {numero_cvt} salva com {len(st.session_state.pecas_adicionadas)} peça(s)!")
-
+                        
                         # Limpa o session state
                         st.session_state.mostrar_pecas = False
                         st.session_state.pecas_adicionadas = []
@@ -932,12 +931,12 @@ def cvt_form():
                         st.session_state.cvt_salva = True
                         st.session_state.numero_cvt_salva = numero_cvt
                         st.rerun()
-
+        
         with col_save2:
             if st.button("↩️ Voltar para Editar CVT"):
                 st.session_state.mostrar_pecas = False
                 st.rerun()
-
+        
         with col_save3:
             if st.button("🗑️ Cancelar CVT"):
                 st.session_state.mostrar_pecas = False
@@ -957,22 +956,22 @@ def cvt_form():
         # Busca os dados da CVT salva
         cvt_df = read_all_cvt()
         cvt_salva_df = cvt_df[cvt_df['numero_cvt'] == numero_cvt]  # Renomeei para evitar conflito
-
+        
         if not cvt_salva_df.empty:
             dados_cvt = cvt_salva_df.iloc[0].to_dict()
-
+            
             # Busca as peças relacionadas a esta CVT
             req_df = read_all_requisicoes()
             pecas_cvt = req_df[req_df['numero_cvt'] == numero_cvt]
             pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
-
+            
             # Gera o PDF
             pdf = gerar_pdf_cvt(dados_cvt, pecas_lista)
-
+            
             # Botão de download
             nome_arquivo = f"CVT_{numero_cvt}.pdf"
             criar_botao_download_pdf(pdf, nome_arquivo)
-
+            
             col_pos1, col_pos2 = st.columns(2)
             with col_pos1:
                 if st.button("➕ Nova CVT"):
@@ -991,23 +990,23 @@ def cvt_form():
         st.subheader("📋 Minhas CVTs Recentes")
         cvt_df = read_all_cvt()
         user_cvts = cvt_df[cvt_df["tecnico"] == st.session_state["user_nome"]]
-
+        
         if not user_cvts.empty:
             display_cols = ["numero_cvt", "cliente", "endereco", "elevador", "created_at", "status_cvt"]
             display_df = user_cvts[display_cols].copy()
-
+            
             # Converte a data para formato legível
             try:
                 display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
             except:
                 display_df["created_at"] = display_df["created_at"].astype(str)
-
+            
             # Mostra a tabela
             st.dataframe(display_df.sort_values("created_at", ascending=False).head(10), use_container_width=True)
-
+            
             # Adiciona opção de baixar PDF para cada CVT
             st.subheader("📄 Baixar PDF de CVTs Anteriores")
-
+            
             # Seleção de CVT para download
             cvts_options = display_df['numero_cvt'].tolist()
             if cvts_options:
@@ -1016,23 +1015,23 @@ def cvt_form():
                     options=cvts_options,
                     key="select_cvt_pdf"
                 )
-
+                
                 if cvt_selecionada:
                     # Busca dados completos da CVT selecionada
                     cvt_completa_df = cvt_df[cvt_df['numero_cvt'] == cvt_selecionada]
-
+                    
                     if not cvt_completa_df.empty:
                         cvt_completa = cvt_completa_df.iloc[0].to_dict()
-
+                        
                         # Busca peças
                         req_df = read_all_requisicoes()
                         pecas_cvt = req_df[req_df['numero_cvt'] == cvt_selecionada]
                         pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
-
+                        
                         # Gera o PDF
                         pdf = gerar_pdf_cvt(cvt_completa, pecas_lista)
                         pdf_output = pdf.output(dest='S').encode('latin-1')
-
+                        
                         # Botão de download
                         st.download_button(
                             label=f"📥 Baixar PDF da CVT {cvt_selecionada}",
@@ -1048,7 +1047,7 @@ def cvt_form():
                 st.info("Nenhuma CVT disponível para download.")
         else:
             st.info("Nenhuma CVT encontrada.")
-
+        
         # Botão para voltar
         if st.button("↩️ Voltar para Nova CVT"):
             st.session_state.mostrar_minhas_cvts = False
@@ -1057,18 +1056,18 @@ def cvt_form():
 def minhas_requisicoes():
     """Mostra requisições do técnico logado"""
     st.header("Minhas Requisições")
-
+    
     df = read_all_requisicoes()
     if df.empty:
         st.info("Nenhuma requisição encontrada.")
         return
-
+    
     user_reqs = df[df["tecnico"] == st.session_state["user_nome"]]
-
+    
     if user_reqs.empty:
         st.info("Você não possui requisições registradas.")
         return
-
+    
     # Filtros
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -1077,22 +1076,22 @@ def minhas_requisicoes():
     with col2:
         prioridade_filter = st.selectbox("Filtrar por prioridade",
                                        ["Todas"] + sorted(user_reqs["prioridade"].unique()))
-
+    
     # Aplicar filtros
     filtered_reqs = user_reqs.copy()
     if status_filter != "Todos":
         filtered_reqs = filtered_reqs[filtered_reqs["status"] == status_filter]
     if prioridade_filter != "Todas":
         filtered_reqs = filtered_reqs[filtered_reqs["prioridade"] == prioridade_filter]
-
+    
     # Mostrar resultados
     st.write(f"**Total de requisições:** {len(filtered_reqs)}")
-
+    
     # Formatação da tabela
     display_cols = ["created_at", "numero_cvt", "peca_descricao", "quantidade", "status", "prioridade"]
     display_df = filtered_reqs[display_cols].copy()
     display_df["created_at"] = pd.to_datetime(display_df["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
-
+    
     st.dataframe(display_df.sort_values("created_at", ascending=False), use_container_width=True)
 
 def supervisor_panel():
@@ -1100,24 +1099,24 @@ def supervisor_panel():
     if st.session_state["role"] != "SUPERVISOR":
         st.error("⛔ Acesso restrito a supervisores")
         return
-
+    
     st.header("Painel de Gerenciamento")
-
+    
     tab1, tab2, tab3, tab4 = st.tabs([
         "📦 Todas as Requisições", 
         "📊 Estatísticas", 
         "👥 CVTs",
         "📄 Gerar PDFs"
     ])
-
+    
     with tab1:
         st.subheader("Gestão de Requisições")
-
+        
         df = read_all_requisicoes()
         if df.empty:
             st.info("Nenhuma requisição encontrada.")
             return
-
+        
         # Filtros para supervisor
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -1126,7 +1125,7 @@ def supervisor_panel():
             status_filter = st.selectbox("Status", ["Todos"] + sorted(df["status"].unique()))
         with col3:
             prioridade_filter = st.selectbox("Prioridade", ["Todas"] + sorted(df["prioridade"].unique()))
-
+        
         # Aplicar filtros
         filtered_df = df.copy()
         if tecnico_filter != "Todos":
@@ -1135,41 +1134,41 @@ def supervisor_panel():
             filtered_df = filtered_df[filtered_df["status"] == status_filter]
         if prioridade_filter != "Todas":
             filtered_df = filtered_df[filtered_df["prioridade"] == prioridade_filter]
-
+        
         st.write(f"**Requisições encontradas:** {len(filtered_df)}")
-
+        
         # Exibir tabela
         st.dataframe(filtered_df.sort_values("created_at", ascending=False), use_container_width=True)
-
+    
     with tab2:
         st.subheader("Estatísticas e Relatórios")
-
+        
         df = read_all_requisicoes()
         if not df.empty:
             col1, col2, col3 = st.columns(3)
-
+            
             with col1:
                 total = len(df)
                 pendentes = len(df[df["status"] == "PENDENTE"])
                 st.metric("Total Requisições", total)
                 st.metric("Pendentes", pendentes)
-
+            
             with col2:
                 tecnicos = df["tecnico"].nunique()
                 st.metric("Técnicos Ativos", tecnicos)
-
+            
             with col3:
                 urgentes = len(df[df["prioridade"] == "URGENTE"])
                 st.metric("Urgentes", urgentes)
-
+            
             # Gráfico simples de status
             st.bar_chart(df["status"].value_counts())
         else:
             st.info("Nenhuma requisição encontrada para estatísticas.")
-
+    
     with tab3:
         st.subheader("CVTs dos Técnicos")
-
+        
         cvt_df = read_all_cvt()
         if not cvt_df.empty:
             # Filtros para CVTs
@@ -1186,32 +1185,32 @@ def supervisor_panel():
                     ["Todos"] + sorted(cvt_df["status_cvt"].unique()),
                     key="status_cvt_filter"
                 )
-
+            
             # Aplicar filtros
             filtered_cvts = cvt_df.copy()
             if tecnico_cvt_filter != "Todos":
                 filtered_cvts = filtered_cvts[filtered_cvts["tecnico"] == tecnico_cvt_filter]
             if status_cvt_filter != "Todos":
                 filtered_cvts = filtered_cvts[filtered_cvts["status_cvt"] == status_cvt_filter]
-
+            
             st.write(f"**CVTs encontradas:** {len(filtered_cvts)}")
-
+            
             # Formatar datas para exibição
             display_cvts = filtered_cvts.copy()
             try:
                 display_cvts["created_at"] = pd.to_datetime(display_cvts["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
             except:
                 display_cvts["created_at"] = display_cvts["created_at"].astype(str)
-
+            
             # Mostrar tabela com colunas selecionadas
             cols_to_show = ["numero_cvt", "tecnico", "cliente", "created_at", "status_cvt"]
             st.dataframe(display_cvts[cols_to_show].sort_values("created_at", ascending=False), use_container_width=True)
         else:
             st.info("Nenhuma CVT encontrada.")
-
+    
     with tab4:
         st.subheader("📄 Gerar PDF de CVTs")
-
+        
         cvt_df = read_all_cvt()
         if not cvt_df.empty:
             # Filtros para busca de CVTs
@@ -1225,45 +1224,45 @@ def supervisor_panel():
             with col2:
                 # Campo de busca por número da CVT
                 numero_cvt_busca = st.text_input("Buscar por Número da CVT", placeholder="Ex: CVT-20251006-232324")
-
+            
             # Aplicar filtros
             cvts_filtradas = cvt_df.copy()
             if tecnico_pdf_filter != "Todos":
                 cvts_filtradas = cvts_filtradas[cvts_filtradas["tecnico"] == tecnico_pdf_filter]
             if numero_cvt_busca:
                 cvts_filtradas = cvts_filtradas[cvts_filtradas["numero_cvt"].str.contains(numero_cvt_busca, case=False, na=False)]
-
+            
             if not cvts_filtradas.empty:
                 # Seleção da CVT para gerar PDF
                 st.subheader("Selecionar CVT para Gerar PDF")
-
+                
                 # Criar opções para selectbox
                 cvts_options = cvts_filtradas.apply(
                     lambda x: f"{x['numero_cvt']} - {x['cliente']} ({x['tecnico']}) - {x['created_at']}", 
                     axis=1
                 ).tolist()
-
+                
                 cvt_selecionada_str = st.selectbox(
                     "Selecione uma CVT:",
                     options=cvts_options,
                     key="select_cvt_supervisor"
                 )
-
+                
                 if cvt_selecionada_str:
                     # Extrair o número da CVT da string selecionada
                     numero_cvt_selecionada = cvt_selecionada_str.split(" - ")[0]
-
+                    
                     # Buscar dados completos da CVT selecionada
                     cvt_completa_df = cvt_df[cvt_df['numero_cvt'] == numero_cvt_selecionada]
-
+                    
                     if not cvt_completa_df.empty:
                         cvt_completa = cvt_completa_df.iloc[0].to_dict()
-
+                        
                         # Buscar peças relacionadas
                         req_df = read_all_requisicoes()
                         pecas_cvt = req_df[req_df['numero_cvt'] == numero_cvt_selecionada]
                         pecas_lista = pecas_cvt.to_dict('records') if not pecas_cvt.empty else None
-
+                        
                         # Gerar preview dos dados
                         st.subheader("Pré-visualização dos Dados")
                         col_preview1, col_preview2 = st.columns(2)
@@ -1277,26 +1276,26 @@ def supervisor_panel():
                             st.write(f"**Elevador:** {cvt_completa.get('elevador', 'N/A')}")
                             st.write(f"**Status:** {cvt_completa.get('status_cvt', 'N/A')}")
                             st.write(f"**Peças:** {len(pecas_lista) if pecas_lista else 0}")
-
+                        
                         # Botão para gerar e baixar PDF
                         st.markdown("---")
                         st.subheader("Gerar PDF")
-
+                        
                         # Gerar o PDF
                         pdf = gerar_pdf_cvt(cvt_completa, pecas_lista)
-
+                        
                         # Botão de download
                         nome_arquivo = f"CVT_{numero_cvt_selecionada}.pdf"
                         criar_botao_download_pdf(pdf, nome_arquivo)
-
+                        
                     else:
                         st.error("CVT selecionada não encontrada nos dados completos.")
                 else:
                     st.info("Selecione uma CVT da lista para gerar o PDF.")
-
+            
             else:
                 st.info("Nenhuma CVT encontrada com os filtros aplicados.")
-
+                
             # Mostrar estatísticas rápidas
             st.markdown("---")
             st.subheader("📊 Estatísticas das CVTs")
@@ -1309,14 +1308,14 @@ def supervisor_panel():
             with col_stat3:
                 cvts_com_pecas = len(cvt_df[cvt_df["pecas_requeridas"] != ""])
                 st.metric("CVTs com Peças", cvts_com_pecas)
-
+                
         else:
             st.info("Nenhuma CVT encontrada no sistema.")
 
 # --- Interface Principal ---
 def main_interface():
     """Interface principal do aplicativo"""
-
+    
     # Header com informações do usuário
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
@@ -1330,7 +1329,7 @@ def main_interface():
     with col3:
         if st.button("Sair", use_container_width=True):
             logout()
-
+    
     # Menu de navegação - REMOVIDA A ABA "REQUISIÇÃO"
     if st.session_state["role"] == "SUPERVISOR":
         menu_options = [" Nova CVT", " Minhas Req", "Gerenciamento"]
@@ -1340,7 +1339,7 @@ def main_interface():
         menu_options = [" Nova CVT", " Minhas Req"]
         menu_icons = ["file-earmark-text", "clipboard"]
         default_index = 0
-
+    
     with st.container():
         selected = option_menu(
             menu_title=None,
@@ -1355,7 +1354,7 @@ def main_interface():
                 "nav-link-selected": {"background-color": "#2E86AB"},
             }
         )
-
+    
     # Conteúdo baseado na seleção
     if selected == " Nova CVT":
         cvt_form()
@@ -1367,7 +1366,7 @@ def main_interface():
 # --- App Principal ---
 def main():
     """Função principal do aplicativo"""
-
+    
     # Inicialização da sessão
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -1381,11 +1380,11 @@ def main():
         st.session_state.dados_cvt_temp = None
     if "mostrar_minhas_cvts" not in st.session_state:
         st.session_state.mostrar_minhas_cvts = False
-
+    
     # Verifica autenticação
     if not st.session_state.authenticated:
         login_form()
-
+        
         # Footer informativo
         st.markdown("---")
         st.markdown(
