@@ -8,6 +8,12 @@ import time
 from fpdf import FPDF
 import base64
 
+def get_brasilia_time():
+    """Retorna o horário atual no fuso horário de Brasília (UTC-3)"""
+    utc_now = datetime.datetime.utcnow()
+    brasilia_offset = datetime.timedelta(hours=-3)
+    return utc_now + brasilia_offset
+    
 # --- Configuração inicial ---
 st.set_page_config(page_title="CVT App", layout="centered", page_icon="⚙️")
 
