@@ -1180,47 +1180,61 @@ def supervisor_panel():
         else:
             st.info("Nenhuma requisição encontrada para estatísticas.")
     
-    with tab3:
-        st.subheader("CVTs dos Técnicos")
+        with tab3:
+            st.subheader("CVTs dos Técnicos")
+    
+            cvt_df = read_all_cvt()
+            if not cvt_df.empty:
+                # DEBUG: Mostrar colunas reais (remova depois de corrigir)
+                st.write("🔍 Colunas disponíveis:", list(cvt_df.columns))
         
-        cvt_df = read_all_cvt()
-        if not cvt_df.empty:
-            # Filtros para CVTs
-            col1, col2 = st.columns(2)
-            with col1:
-                tecnico_cvt_filter = st.selectbox(
-                    "Filtrar por Técnico", 
-                    ["Todos"] + sorted(cvt_df["tecnico"].unique()),
-                    key="tecnico_cvt_filter"
-                )
-            with col2:
-                status_cvt_filter = st.selectbox(
-                    "Filtrar por Status",
-                    ["Todos"] + sorted(cvt_df["status_cvt"].unique()),
-                    key="status_cvt_filter"
-                )
+                # Verificar qual é a coluna de status real
+                status_column = "status_cvt" if "status_cvt" in cvt_df.columns else "status" if "status" in cvt_df.columns else None
+        
+                # Filtros para CVTs
+                col1, col2 = st.columns(2)
+                with col1:
+                    tecnico_cvt_filter = st.selectbox(
+                        "Filtrar por Técnico", 
+                        ["Todos"] + sorted(cvt_df["tecnico"].unique()),
+                        key="tecnico_cvt_filter"
+                    )
+                with col2:
+                    if status_column:
+                        status_options = ["Todos"] + sorted(cvt_df[status_column].unique())
+                        status_cvt_filter = st.selectbox(
+                            "Filtrar por Status",
+                            options=status_options,
+                            key="status_cvt_filter"
+                        )
+                    else:
+                        st.info("Coluna de status não encontrada")
+                        status_cvt_filter = "Todos"
+        
+                # Aplicar filtros
+                filtered_cvts = cvt_df.copy()
+                if tecnico_cvt_filter != "Todos":
+                    filtered_cvts = filtered_cvts[filtered_cvts["tecnico"] == tecnico_cvt_filter]
+                if status_cvt_filter != "Todos" and status_column:
+                    filtered_cvts = filtered_cvts[filtered_cvts[status_column] == status_cvt_filter]
+        
+                st.write(f"**CVTs encontradas:** {len(filtered_cvts)}")
+        
+        # Formatar datas para exibição
+                display_cvts = filtered_cvts.copy()
+                try:
+                    display_cvts["created_at"] = pd.to_datetime(display_cvts["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
+                except:
+                    display_cvts["created_at"] = display_cvts["created_at"].astype(str)
+        
+                # Mostrar tabela com colunas selecionadas
+                cols_to_show = ["numero_cvt", "tecnico", "cliente", "created_at"]
+                if status_column:
+                    cols_to_show.append(status_column)
             
-            # Aplicar filtros
-            filtered_cvts = cvt_df.copy()
-            if tecnico_cvt_filter != "Todos":
-                filtered_cvts = filtered_cvts[filtered_cvts["tecnico"] == tecnico_cvt_filter]
-            if status_cvt_filter != "Todos":
-                filtered_cvts = filtered_cvts[filtered_cvts["status_cvt"] == status_cvt_filter]
-            
-            st.write(f"**CVTs encontradas:** {len(filtered_cvts)}")
-            
-            # Formatar datas para exibição
-            display_cvts = filtered_cvts.copy()
-            try:
-                display_cvts["created_at"] = pd.to_datetime(display_cvts["created_at"]).dt.strftime("%d/%m/%Y %H:%M")
-            except:
-                display_cvts["created_at"] = display_cvts["created_at"].astype(str)
-            
-            # Mostrar tabela com colunas selecionadas
-            cols_to_show = ["numero_cvt", "tecnico", "cliente", "created_at", "status_cvt"]
-            st.dataframe(display_cvts[cols_to_show].sort_values("created_at", ascending=False), use_container_width=True)
-        else:
-            st.info("Nenhuma CVT encontrada.")
+                st.dataframe(display_cvts[cols_to_show].sort_values("created_at", ascending=False), use_container_width=True)
+            else:
+                st.info("Nenhuma CVT encontrada.")
     
     with tab4:
         st.subheader("📄 Gerar PDF de CVTs")
