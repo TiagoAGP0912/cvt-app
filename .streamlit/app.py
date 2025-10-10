@@ -8,12 +8,6 @@ import time
 from fpdf import FPDF
 import base64
 
-def get_brasilia_time():
-    """Retorna o horário atual no fuso horário de Brasília (UTC-3)"""
-    utc_now = datetime.datetime.utcnow()
-    brasilia_offset = datetime.timedelta(hours=-3)
-    return utc_now + brasilia_offset
-    
 # --- Configuração inicial ---
 st.set_page_config(page_title="CVT App", layout="centered", page_icon="⚙️")
 
@@ -466,16 +460,27 @@ def render_campos_dinamicos(campos):
     
     return valores
 
+# --- Usa o tempo de Brasília ---
+
+def get_brasilia_time():
+    """Retorna o horário atual no fuso horário de Brasília (UTC-3)"""
+    utc_now = datetime.datetime.utcnow()
+    brasilia_offset = datetime.timedelta(hours=-3)
+    return utc_now + brasilia_offset
+    
 # --- Funções para CVT ---
 def append_cvt(data):
     """Salva CVT no Google Sheets ou CSV"""
     client_info = get_client_and_worksheets()
     
-    # Gera número único para CVT
-    numero_cvt = f"CVT-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    # Usar horário de Brasília
+    data_hora_brasilia = get_brasilia_time()
+    
+    # Gera número único para CVT com horário correto
+    numero_cvt = f"CVT-{data_hora_brasilia.strftime('%Y%m%d-%H%M%S')}"
     
     row = [
-        datetime.datetime.now().isoformat(),
+        data_hora_brasilia.isoformat(),
         data["tecnico"],
         data["cliente"],
         data["endereco"],
