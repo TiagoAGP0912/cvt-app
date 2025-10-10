@@ -1241,7 +1241,7 @@ def supervisor_panel():
         else:
             st.info("Nenhuma requisição encontrada para estatísticas.")
     
-with tab3:
+    with tab3:
     st.subheader("CVTs dos Técnicos")
     
     # Adicionar um botão para debug apenas nesta tab
